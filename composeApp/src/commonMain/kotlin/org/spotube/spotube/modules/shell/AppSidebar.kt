@@ -64,6 +64,7 @@ import org.spotube.spotube.core.ui.theming.AppTheme
 import org.spotube.spotube.modules.library.LibraryState
 import org.spotube.spotube.modules.library.LibraryTab
 import org.spotube.spotube.modules.support.LocalSupportPrompt
+import org.spotube.spotube.resources.glyphs.Glyphs
 import org.spotube.spotube.resources.iconsax.Iconsax
 import org.spotube.spotube.resources.iconsax.IconsaxHeart2
 import org.spotube.spotube.resources.iconsax.IconsaxSetting2
@@ -140,7 +141,7 @@ fun AppSidebar(
                 }
                 MillenniumSidebarTrigger {
                     MillenniumIconButton(
-                        if (it.collapsed) Iconsax.IconsaxSidebarRightBroken else Iconsax.IconsaxSidebarLeftBroken,
+                        if (it.collapsed) Glyphs.SidebarExpand else Glyphs.SidebarCollapse,
                         contentDescription = stringResource(Res.string.shell_sidebar_toggle_content_description),
                         style = MillenniumIconButtonStyle.Quiet,
                         onClick = { it.toggle() }
@@ -210,14 +211,14 @@ fun AppSidebar(
                 label = supportLabel,
                 onClick = { openSupport() },
                 contentDescription = supportLabel,
-                icon = Iconsax.IconsaxHeart2
+                icon = Glyphs.Heart
             )
             MillenniumSidebarItem(
                 label = stringResource(Res.string.settings_screen_title),
                 onClick = { navigator.navigate(Routes.Settings) },
                 selected = navigationState.topLevelRoute == Routes.Settings,
                 contentDescription = stringResource(Res.string.settings_screen_title),
-                icon = Iconsax.IconsaxSetting2
+                icon = Glyphs.Settings
             )
         }
     }

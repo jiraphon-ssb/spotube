@@ -686,12 +686,17 @@ private fun TrackListRow(
                                     onCheckedChange = { onSelectionToggle(it) },
                                     label = "",
                                     modifier = Modifier.shimmerApply())
+                            } else if (isCurrentTrack) {
+                                // The playing row shows a live equaliser instead of its number.
+                                PlayingBars(
+                                    color = AppTheme.colors.primary,
+                                    playing = isCurrentTrackPlaying)
                             } else {
                                 TextWithShimmer(
                                     text = index.toString(),
                                     style = AppTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
                                     textAlign = TextAlign.Center,
-                                    color = if (isCurrentTrack) AppTheme.colors.primary else AppTheme.colors.onSurfaceVariant)
+                                    color = AppTheme.colors.onSurfaceVariant)
                             }
                         }
                     }

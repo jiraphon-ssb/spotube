@@ -86,8 +86,11 @@ internal fun rememberPlayerUiState(
     audioPlayer: AudioPlayerInterface,
     audioPlayerQueue: AudioPlayerQueue
 ): PlayerUiState {
-    val queue by audioPlayerQueue.queueFlow.collectAsState(initial = emptyList())
-    val currentQueueEntry by audioPlayerQueue.currentQueueEntryFlow.collectAsState(initial = null)
+    // Both are StateFlows: start from their current value. An explicit `initial` of empty/null
+    // made every freshly composed player think nothing was playing for one frame (the
+    // full-window player closed itself on open; the side panel flashed its empty state).
+    val queue by audioPlayerQueue.queueFlow.collectAsState()
+    val currentQueueEntry by audioPlayerQueue.currentQueueEntryFlow.collectAsState()
     val playerState by audioPlayer.playerStateFlow.collectAsState()
     val position by audioPlayer.positionFlow.collectAsState()
     val duration by audioPlayer.durationFlow.collectAsState()

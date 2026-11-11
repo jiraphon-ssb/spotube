@@ -224,6 +224,133 @@ object Glyphs {
 
     val ChevronRight: ImageVector by lazy { glyph("ChevronRight", strokes = listOf("m9 18 6-6-6-6")) }
 
+    // --- Navigation (outline) ---------------------------------------------------------------
+
+    val Home: ImageVector by lazy {
+        glyph(
+            "Home",
+            strokes = listOf(
+                "M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8",
+                "M3 10a2 2 0 0 1 .7-1.5l7-6a2 2 0 0 1 2.6 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+            )
+        )
+    }
+
+    val Search: ImageVector by lazy {
+        glyph("Search", strokes = listOf("M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z", "m21 21-4.3-4.3"))
+    }
+
+    val Playlists: ImageVector by lazy {
+        glyph(
+            "Playlists",
+            strokes = listOf(
+                "M21 15V6",
+                "M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z",
+                "M12 12H3",
+                "M16 6H3",
+                "M12 18H3"
+            )
+        )
+    }
+
+    val Albums: ImageVector by lazy {
+        glyph(
+            "Albums",
+            strokes = listOf(
+                "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z",
+                "M6 12c0-1.7.7-3.2 1.8-4.2",
+                "M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z",
+                "M18 12c0 1.7-.7 3.2-1.8 4.2"
+            )
+        )
+    }
+
+    val Artists: ImageVector by lazy {
+        glyph(
+            "Artists",
+            strokes = listOf(
+                "M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2",
+                "M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"
+            )
+        )
+    }
+
+    val LocalFiles: ImageVector by lazy {
+        glyph(
+            "LocalFiles",
+            strokes = listOf(
+                "M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.7-.9l-.8-1.2A2 2 0 0 0 7.9 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z",
+                "M11 17.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z",
+                "M11 17.5V11l4 1.2"
+            )
+        )
+    }
+
+    val Devices: ImageVector by lazy {
+        glyph(
+            "Devices",
+            strokes = listOf(
+                "M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6",
+                "M2 12a9 9 0 0 1 8 8",
+                "M2 16a5 5 0 0 1 4 4",
+                "M2 20h.01"
+            )
+        )
+    }
+
+    val GroupJam: ImageVector by lazy {
+        glyph(
+            "GroupJam",
+            strokes = listOf(
+                "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2",
+                "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+                "M22 21v-2a4 4 0 0 0-3-3.9",
+                "M16 3.1a4 4 0 0 1 0 7.8"
+            )
+        )
+    }
+
+    val Heart: ImageVector by lazy {
+        glyph(
+            "Heart",
+            strokes = listOf(
+                "M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z"
+            )
+        )
+    }
+
+    val Settings: ImageVector by lazy {
+        glyph(
+            "Settings",
+            strokes = listOf(
+                "M12.2 2h-.4a2 2 0 0 0-2 2v.2a2 2 0 0 1-1 1.7l-.4.3a2 2 0 0 1-2 0l-.2-.1a2 2 0 0 0-2.7.7l-.2.4a2 2 0 0 0 .7 2.7l.2.1a2 2 0 0 1 1 1.7v.5a2 2 0 0 1-1 1.7l-.2.1a2 2 0 0 0-.7 2.7l.2.4a2 2 0 0 0 2.7.7l.2-.1a2 2 0 0 1 2 0l.4.3a2 2 0 0 1 1 1.7v.2a2 2 0 0 0 2 2h.4a2 2 0 0 0 2-2v-.2a2 2 0 0 1 1-1.7l.4-.3a2 2 0 0 1 2 0l.2.1a2 2 0 0 0 2.7-.7l.2-.4a2 2 0 0 0-.7-2.7l-.2-.1a2 2 0 0 1-1-1.7v-.5a2 2 0 0 1 1-1.7l.2-.1a2 2 0 0 0 .7-2.7l-.2-.4a2 2 0 0 0-2.7-.7l-.2.1a2 2 0 0 1-2 0l-.4-.3a2 2 0 0 1-1-1.7V4a2 2 0 0 0-2-2z",
+                "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"
+            )
+        )
+    }
+
+    val SidebarCollapse: ImageVector by lazy {
+        glyph(
+            "SidebarCollapse",
+            strokes = listOf(
+                "M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z",
+                "M9 3v18",
+                "m16 15-3-3 3-3"
+            )
+        )
+    }
+
+    val SidebarExpand: ImageVector by lazy {
+        glyph(
+            "SidebarExpand",
+            strokes = listOf(
+                "M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z",
+                "M9 3v18",
+                "m14 9 3 3-3 3"
+            )
+        )
+    }
+
     // --- Volume (outline) -------------------------------------------------------------------
 
     private const val SPEAKER =

@@ -80,7 +80,7 @@ private enum class FullPlayerPane { Lyrics, Queue }
 
 /**
  * Desktop "now playing" that takes over the whole window, in the spirit of Apple Music's full
- * screen player: artwork, title and the same control deck on the left; lyrics or the queue on the
+ * screen player: a record sliding out of its sleeve, title and the same control deck on the left; lyrics or the queue on the
  * right. Close with the collapse button or Escape. It reuses [rememberPlayerController] and the
  * side panel's building blocks, so behaviour is identical.
  */
@@ -158,7 +158,8 @@ fun AppFullPlayer(
 
             BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 // The left column never gets wider than the artwork reads well at.
-                val leftWidth = (maxWidth * 0.42f).coerceIn(300.dp, 460.dp)
+                // Room for the sleeve plus the record sliding out of it.
+                val leftWidth = (maxWidth * 0.5f).coerceIn(340.dp, 580.dp)
                 Row(modifier = Modifier.fillMaxSize()) {
                     Column(
                         modifier = Modifier
@@ -167,7 +168,7 @@ fun AppFullPlayer(
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.Center
                     ) {
-                        PlayerArtwork(
+                        VinylArtwork(
                             player = player,
                             onOpenAlbum = { id ->
                                 onCollapse()

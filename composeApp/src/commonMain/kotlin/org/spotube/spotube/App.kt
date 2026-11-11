@@ -59,6 +59,7 @@ import org.spotube.spotube.modules.update.PluginUpdateDialog
 import org.spotube.spotube.modules.update.PluginUpdateService
 import org.spotube.spotube.modules.webview.WebViewScreen
 import org.spotube.spotube.modules.welcome.WelcomeRepository
+import org.spotube.spotube.resources.glyphs.Glyphs
 import org.spotube.spotube.resources.iconsax.Iconsax
 import org.spotube.spotube.resources.iconsax.IconsaxCd
 import org.spotube.spotube.resources.iconsax.IconsaxDirectboxReceive
@@ -103,8 +104,8 @@ interface NavigationItem {
 }
 
 private val tabs = listOf<NavigationItem>(
-    NavigationItem.Tab<Any>(Res.string.nav_home, Iconsax.IconsaxHome, Routes.Home),
-    NavigationItem.Tab<Any>(Res.string.nav_search, Iconsax.IconsaxSearch, Routes.Search)
+    NavigationItem.Tab<Any>(Res.string.nav_home, Glyphs.Home, Routes.Home),
+    NavigationItem.Tab<Any>(Res.string.nav_search, Glyphs.Search, Routes.Search)
 )
 
 val sidebarTabs = tabs + listOf(
@@ -113,12 +114,12 @@ val sidebarTabs = tabs + listOf(
         items = listOf(
             NavigationItem.Tab(
                 Res.string.library_tab_playlists,
-                Iconsax.IconsaxMusicDashboard,
+                Glyphs.Playlists,
                 Routes.Library,
                 LibraryTab.Playlists
             ),
-            NavigationItem.Tab(Res.string.library_tab_albums, Iconsax.IconsaxCd, Routes.Library, LibraryTab.Albums),
-            NavigationItem.Tab(Res.string.library_tab_artists, Iconsax.User, Routes.Library, LibraryTab.Artists)
+            NavigationItem.Tab(Res.string.library_tab_albums, Glyphs.Albums, Routes.Library, LibraryTab.Albums),
+            NavigationItem.Tab(Res.string.library_tab_artists, Glyphs.Artists, Routes.Library, LibraryTab.Artists)
         )
     ),
     NavigationItem.Group(
@@ -126,13 +127,13 @@ val sidebarTabs = tabs + listOf(
         items = listOf(
             NavigationItem.Tab(
                 Res.string.library_tab_local_tracks,
-                Iconsax.IconsaxMusicLibrary,
+                Glyphs.LocalFiles,
                 Routes.Library,
                 LibraryTab.LocalTracks
             ),
             NavigationItem.Tab(
                 Res.string.library_tab_downloads,
-                Iconsax.IconsaxDirectboxReceive,
+                Glyphs.Download,
                 Routes.Library,
                 LibraryTab.Downloads
             )
@@ -141,14 +142,14 @@ val sidebarTabs = tabs + listOf(
     NavigationItem.Group(
         Res.string.nav_group_connect,
         items = listOf(
-            NavigationItem.Tab(Res.string.nav_devices, Iconsax.IconsaxMirrorScreenRegular, Routes.Devices),
-            NavigationItem.Tab(Res.string.jam_screen_title, Iconsax.IconsaxSoundTwotone, Routes.Jam)
+            NavigationItem.Tab(Res.string.nav_devices, Glyphs.Devices, Routes.Devices),
+            NavigationItem.Tab(Res.string.jam_screen_title, Glyphs.GroupJam, Routes.Jam)
         )
     )
 )
 val bottombarTabs = tabs + listOf(
-    NavigationItem.Tab<Any>(Res.string.library_toolbar_compact_title, Iconsax.IconsaxMusicLibrary, Routes.Library),
-    NavigationItem.Tab(Res.string.settings_screen_title, Iconsax.IconsaxSetting2, Routes.Settings)
+    NavigationItem.Tab<Any>(Res.string.library_toolbar_compact_title, Glyphs.Playlists, Routes.Library),
+    NavigationItem.Tab(Res.string.settings_screen_title, Glyphs.Settings, Routes.Settings)
 )
 
 @OptIn(KoinExperimentalAPI::class)

@@ -18,6 +18,14 @@
 package org.spotube.spotube.core.ui.component
 
 import androidx.compose.animation.AnimatedContent
+import org.spotube.spotube.core.ui.coverflow.rememberCoverflowState
+import org.spotube.spotube.core.ui.coverflow.CoverflowParams
+import org.spotube.spotube.core.ui.coverflow.Coverflow
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -45,6 +53,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -96,22 +105,24 @@ import spotube.composeapp.generated.resources.player_play_content_description
 import spotube.composeapp.generated.resources.player_previous_content_description
 
 /**
- * Home "featured" spotlight.
+ * Home "featured" coverflow.
  *
- * Replaces the old 3D coverflow (dimmed side cards, black gradient scrims, a small blurred play
- * button) with one flat card: full-strength artwork, a large title as the focal point, explicit
- * Play/Open actions and a thumbnail strip to pick another item. No dimming, gradients or blur.
+ * Keeps the 3D coverflow but takes everything off the artwork: no black gradient scrim, no small
+ * blurred play button, no text printed over covers. The centred item's title, artist and explicit
+ * Play/Open actions sit underneath it instead, with visible arrows and a position counter.
  */
 @Composable
 fun FeaturedCarousel(
     items: List<MetadataBrowseItem>,
     modifier: Modifier = Modifier
 ) {
+    // Lazy keys must be unique; browse data can repeat an album/track across sections.
     val featured = remember(items) {
-        items.mapNotNull { it.toFeatured() }
+        items.mapNotNull { it.toFeatured() }.distinctBy { it.key }
     }
     if (featured.isEmpty()) return
-    FeaturedSpotlight(items = featured, modifier = modifier)
+    // The coverflow state captures its select handler once, so start fresh when the data changes.
+    key(featured) { FeaturedCoverflow(items = featured, modifier = modifier) }
 }
 
 /** The bits of a browse item the spotlight shows, resolved once. */
@@ -154,12 +165,16 @@ private fun MetadataBrowseItem.toFeatured(): FeaturedItem? = when (this) {
     else -> null
 }
 
+
 @Composable
-private fun FeaturedSpotlight(items: List<FeaturedItem>, modifier: Modifier = Modifier) {
-    var selectedIndex by remember(items) { mutableIntStateOf(0) }
-    val selected = items[selectedIndex.coerceIn(0, items.lastIndex)]
+private fun FeaturedCoverflow(items: List<FeaturedItem>, modifier: Modifier = Modifier) {
     val colors = AppTheme.colors
     val navigationCommands = koinInject<NavigationCommands>()
+    val startIndex = remember { items.size / 2 }
+    var selectedIndex by remember { mutableIntStateOf(startIndex) }
+    // The coverflow reports -1 while nothing is exactly centred (mid-scroll); keep the last item.
+    val state = rememberCoverflowState(startIndex) { index -> if (index >= 0) selectedIndex = index }
+    val selected = items[selectedIndex.coerceIn(0, items.lastIndex)]
 
     fun open(item: FeaturedItem) {
         when (val src = item.source) {
@@ -171,209 +186,185 @@ private fun FeaturedSpotlight(items: List<FeaturedItem>, modifier: Modifier = Mo
         }
     }
 
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
-        val compact = maxWidth < 600.dp
-        val artSize = if (compact) 120.dp else 256.dp
+    fun go(index: Int) {
+        if (index in items.indices) state.scrollToItem(index)
+    }
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(colors.surface)
-                .border(1.dp, colors.outline, RoundedCornerShape(20.dp))
-                .padding(if (compact) 14.dp else 20.dp),
-            verticalAlignment = Alignment.Top
+    BoxWithConstraints(modifier = modifier.fillMaxWidth().padding(top = 8.dp)) {
+        val compact = maxWidth < 600.dp
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            AnimatedContent(
-                targetState = selected,
-                transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(160)) },
-                contentKey = { it.key },
-                label = "featured_artwork"
-            ) { item ->
-                Box(
-                    modifier = Modifier
-                        .size(artSize)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(colors.surfaceContainerHigh)
-                        .clickable { open(item) }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(if (compact) 200.dp else 280.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Coverflow(
+                    state = state,
+                    params = CoverflowParams(
+                        size = 1f,
+                        offset = 0.38f,
+                        angle = 12f,
+                        shift = 0.255f,
+                        zoom = 0.7864f,
+                        mirror = false
+                    )
                 ) {
-                    AsyncImage(
-                        model = item.artworkUrl,
-                        contentDescription = item.title,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                    items(
+                        count = items.size,
+                        key = { index -> items[index].key }
+                    ) { index ->
+                        CoverflowCard(
+                            item = items[index],
+                            isCentered = index == selectedIndex,
+                            onClick = {
+                                if (index == selectedIndex) open(items[index]) else go(index)
+                            }
+                        )
+                    }
+                }
+
+                if (!compact && items.size > 1) {
+                    CoverflowArrow(
+                        forward = false,
+                        enabled = selectedIndex > 0,
+                        onClick = { go(selectedIndex - 1) },
+                        modifier = Modifier.align(Alignment.CenterStart).padding(start = 12.dp)
+                    )
+                    CoverflowArrow(
+                        forward = true,
+                        enabled = selectedIndex < items.lastIndex,
+                        onClick = { go(selectedIndex + 1) },
+                        modifier = Modifier.align(Alignment.CenterEnd).padding(end = 12.dp)
                     )
                 }
             }
 
-            Spacer(Modifier.width(if (compact) 16.dp else 28.dp))
+            Spacer(Modifier.height(if (compact) 10.dp else 14.dp))
 
-            // Desktop: the text column matches the artwork height so the strip sits on its
-            // baseline. Compact: let it grow instead of clipping two-line titles.
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .then(if (compact) Modifier else Modifier.height(artSize))
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            // Details of the centred item, under it rather than printed over the artwork.
+            AnimatedContent(
+                targetState = selected,
+                transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(140)) },
+                contentKey = { it.key },
+                label = "featured_details"
+            ) { item ->
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text(
                         text = stringResource(
-                            when (selected.kind) {
+                            when (item.kind) {
                                 FeaturedKind.Album -> Res.string.media_album
                                 FeaturedKind.Playlist -> Res.string.media_playlist
                                 FeaturedKind.Song -> Res.string.media_song
                             }
-                        ),
-                        style = AppTheme.typography.labelMedium,
-                        color = colors.onSurfaceVariant,
-                        modifier = Modifier.weight(1f)
+                        ) + if (items.size > 1) "  ${selectedIndex + 1} / ${items.size}" else "",
+                        style = AppTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
+                        color = colors.onSurfaceVariant
                     )
-                    if (items.size > 1) {
+                    Text(
+                        text = item.title,
+                        style = if (compact) AppTheme.typography.titleLarge
+                        else AppTheme.typography.headlineMedium,
+                        color = colors.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                    if (!item.subtitle.isNullOrBlank()) {
                         Text(
-                            text = "${selectedIndex + 1} / ${items.size}",
-                            style = AppTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
+                            text = item.subtitle,
+                            style = AppTheme.typography.bodyMedium,
                             color = colors.onSurfaceVariant,
-                            modifier = Modifier.padding(end = 4.dp)
-                        )
-                        SpotlightArrow(
-                            forward = false,
-                            enabled = selectedIndex > 0,
-                            onClick = { selectedIndex -= 1 }
-                        )
-                        SpotlightArrow(
-                            forward = true,
-                            enabled = selectedIndex < items.lastIndex,
-                            onClick = { selectedIndex += 1 }
-                        )
-                    }
-                }
-
-                AnimatedContent(
-                    targetState = selected,
-                    transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(160)) },
-                    contentKey = { it.key },
-                    label = "featured_text"
-                ) { item ->
-                    Column {
-                        Text(
-                            text = item.title,
-                            style = if (compact) AppTheme.typography.titleLarge
-                            else AppTheme.typography.headlineLarge,
-                            color = colors.onSurface,
-                            maxLines = 2,
+                            maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(top = 4.dp)
+                            textAlign = TextAlign.Center
                         )
-                        if (!item.subtitle.isNullOrBlank()) {
-                            Text(
-                                text = item.subtitle,
-                                style = AppTheme.typography.bodyLarge,
-                                color = colors.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
                     }
-                }
-
-                Spacer(Modifier.height(if (compact) 10.dp else 16.dp))
-
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    FeaturedPlayButton(item = selected)
-                    if (selected.kind != FeaturedKind.Song ||
-                        (selected.source as? MetadataBrowseItem.Track)?.data?.album != null
-                    ) {
-                        MillenniumButton(
-                            onClick = { open(selected) },
-                            style = MillenniumButtonStyle.Secondary
-                        ) {
-                            Text(stringResource(Res.string.featured_open))
-                        }
-                    }
-                }
-
-                if (items.size > 1 && !compact) {
-                    Spacer(Modifier.weight(1f))
-                    ThumbnailStrip(
-                        items = items,
-                        selectedIndex = selectedIndex,
-                        onSelect = { selectedIndex = it }
-                    )
                 }
             }
+
+            Spacer(Modifier.height(12.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                FeaturedPlayButton(item = selected)
+                if (selected.kind != FeaturedKind.Song ||
+                    (selected.source as? MetadataBrowseItem.Track)?.data?.album != null
+                ) {
+                    MillenniumButton(
+                        onClick = { open(selected) },
+                        style = MillenniumButtonStyle.Secondary
+                    ) {
+                        Text(stringResource(Res.string.featured_open))
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+/**
+ * One cover in the coverflow: artwork only. Off-centre covers are dimmed a little (less than the
+ * old 50%) so depth reads without turning them into black tiles.
+ */
+@Composable
+private fun CoverflowCard(item: FeaturedItem, isCentered: Boolean, onClick: () -> Unit) {
+    val colors = AppTheme.colors
+    val dim by animateFloatAsState(if (isCentered) 0f else 0.35f, tween(220), label = "cover_dim")
+    val shape = RoundedCornerShape(18.dp)
+    Box(
+        modifier = Modifier
+            .aspectRatio(1f)
+            .clip(shape)
+            .background(colors.surfaceContainerHigh)
+            .border(1.dp, Color.White.copy(alpha = 0.06f), shape)
+            .clickable(onClickLabel = item.title, onClick = onClick)
+    ) {
+        AsyncImage(
+            model = item.artworkUrl,
+            contentDescription = item.title,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+        if (dim > 0f) {
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = dim)))
         }
     }
 }
 
 @Composable
-private fun SpotlightArrow(forward: Boolean, enabled: Boolean, onClick: () -> Unit) {
-    MillenniumIconButton(
-        onClick = onClick,
-        enabled = enabled,
-        style = MillenniumIconButtonStyle.Quiet,
-        shape = RoundedCornerShape(8.dp),
-        size = androidx.compose.ui.unit.DpSize(32.dp, 32.dp)
-    ) {
-        MillenniumIcon(
-            if (forward) Glyphs.ChevronRight else Glyphs.ChevronLeft,
-            contentDescription = stringResource(
-                if (forward) Res.string.player_next_content_description
-                else Res.string.player_previous_content_description
-            ),
-            tint = AppTheme.colors.onSurfaceVariant,
-            size = 18.dp
-        )
-    }
-}
-
-/** Small artwork strip; the current item gets an accent ring, the rest sit at reduced opacity. */
-@Composable
-private fun ThumbnailStrip(
-    items: List<FeaturedItem>,
-    selectedIndex: Int,
-    onSelect: (Int) -> Unit
+private fun CoverflowArrow(
+    forward: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
-    val listState = rememberLazyListState()
-    LaunchedEffect(selectedIndex) {
-        listState.animateScrollToItem((selectedIndex - 2).coerceAtLeast(0))
-    }
-    LazyRow(
-        state = listState,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        itemsIndexed(items, key = { _, item -> item.key }) { index, item ->
-            val interaction = remember { MutableInteractionSource() }
-            val hovered by interaction.collectIsHoveredAsState()
-            val isSelected = index == selectedIndex
-            val description = stringResource(Res.string.featured_show_item, item.title)
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .alpha(if (isSelected || hovered) 1f else 0.55f)
-                    .border(
-                        width = 2.dp,
-                        color = if (isSelected) colors.primary else Color.Transparent,
-                        shape = RoundedCornerShape(10.dp)
-                    )
-                    .padding(3.dp)
-                    .clip(RoundedCornerShape(7.dp))
-                    .background(colors.surfaceContainerHigh)
-                    .hoverable(interaction)
-                    .clickable(onClickLabel = description) { onSelect(index) }
-            ) {
-                AsyncImage(
-                    model = item.artworkUrl,
-                    contentDescription = description,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            }
+    Box(modifier = modifier) {
+        MillenniumIconButton(
+            onClick = onClick,
+            enabled = enabled,
+            style = MillenniumIconButtonStyle.Quiet,
+            background = SolidColor(colors.surface.copy(alpha = 0.92f)),
+            shape = RoundedCornerShape(50),
+            size = DpSize(40.dp, 40.dp)
+        ) {
+            MillenniumIcon(
+                if (forward) Glyphs.ChevronRight else Glyphs.ChevronLeft,
+                contentDescription = stringResource(
+                    if (forward) Res.string.player_next_content_description
+                    else Res.string.player_previous_content_description
+                ),
+                tint = colors.onSurface,
+                size = 20.dp
+            )
         }
     }
 }

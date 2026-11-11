@@ -481,14 +481,30 @@ private fun flatComponents(t: SpotubeTokens, fontFamily: FontFamily): Millennium
     val button = base.buttonTheme.copy(
         primary = base.buttonTheme.primary.flatButton(),
         secondary = base.buttonTheme.secondary.flatButton(),
-        quiet = base.buttonTheme.quiet.flatButton(),
+        quiet = base.buttonTheme.quiet.flatButton().mapStates { state, s ->
+            when (state) {
+                MillenniumControlState.Hovered -> s.copy(background = SolidColor(t.hover), borderWidth = 0.dp)
+                MillenniumControlState.Pressed -> s.copy(background = SolidColor(t.card), borderWidth = 0.dp)
+                else -> s
+            }
+        },
         danger = base.buttonTheme.danger.flatButton()
     )
 
     val iconButton = base.iconButtonTheme.copy(
         primary = base.iconButtonTheme.primary.flatIconButton(),
         secondary = base.iconButtonTheme.secondary.flatIconButton(),
-        quiet = base.iconButtonTheme.quiet.flatIconButton(),
+        // Quiet = toolbar buttons: a flat neutral plate on hover/press, no ring or tint.
+        // Keyboard focus keeps its ring.
+        quiet = base.iconButtonTheme.quiet.flatIconButton().mapStates { state, s ->
+            when (state) {
+                MillenniumControlState.Hovered -> s.copy(background = SolidColor(t.hover), borderWidth = 0.dp)
+                MillenniumControlState.Pressed -> s.copy(background = SolidColor(t.card), borderWidth = 0.dp)
+                MillenniumControlState.Selected -> s.copy(background = SolidColor(t.card), borderWidth = 0.dp)
+                MillenniumControlState.Focused -> s.copy(background = SolidColor(t.hover), borderColor = t.accent)
+                else -> s.copy(borderWidth = 0.dp)
+            }
+        },
         danger = base.iconButtonTheme.danger.flatIconButton()
     )
 
@@ -521,6 +537,29 @@ private fun flatComponents(t: SpotubeTokens, fontFamily: FontFamily): Millennium
         }
     )
 
+    // List rows (track lists, queue, menus): flat hover plate instead of an accent-tinted
+    // gradient + border; the current/selected row sits on the card colour.
+    val listTile = base.listTileTheme.copy(
+        states = base.listTileTheme.states.mapStates { state, s ->
+            val plate = when (state) {
+                MillenniumControlState.Hovered, MillenniumControlState.Focused -> t.hover
+                MillenniumControlState.Pressed -> t.card
+                MillenniumControlState.Error -> t.danger.copy(alpha = 0.12f)
+                else -> Color.Transparent
+            }
+            s.copy(
+                background = SolidColor(plate),
+                selectedBackground = SolidColor(
+                    if (state == MillenniumControlState.Hovered || state == MillenniumControlState.Pressed) t.hover
+                    else t.card
+                ),
+                shape = RoundedCornerShape(10.dp),
+                borderColor = if (state == MillenniumControlState.Focused) t.accent else clear,
+                innerGlowColor = clear
+            )
+        }
+    )
+
     val sidebarBase = base.sidebarTheme
     val sidebar = sidebarBase.copy(
         root = sidebarBase.root.mapStates { _, s ->
@@ -535,48 +574,62 @@ private fun flatComponents(t: SpotubeTokens, fontFamily: FontFamily): Millennium
         // The nav list is short; an always-visible scrollbar track just reads as a stray line.
         // It still scrolls with the wheel/trackpad on short windows.
         content = sidebarBase.content.mapStates { _, s -> s.copy(showScrollbar = false) },
+        header = sidebarBase.header.mapStates { _, s -> s.copy(dividerWidth = 0.dp) },
+        // Groups: quiet 12sp labels, no bordered label row, a little air above each group.
         group = sidebarBase.group.mapStates { _, s ->
             s.copy(
+                contentPadding = PaddingValues(start = 2.dp, end = 2.dp, top = 14.dp, bottom = 2.dp),
                 labelStyle = s.labelStyle.copy(
                     fontFamily = fontFamily,
                     fontSize = 12.sp,
                     lineHeight = 18.sp,
                     fontWeight = FontWeight.Medium,
                     letterSpacing = 0.sp
-                )
+                ),
+                labelPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                labelMinimumHeight = 28.dp,
+                labelBorderWidth = 0.dp
             )
         },
+        // Items: resting labels a step softer than the selected one, outline icons in the
+        // muted colour; selection = white label + accent icon + accent edge bar.
         item = sidebarBase.item.mapStates { state, s ->
             val flat = s.copy(
                 labelStyle = s.labelStyle.copy(fontFamily = fontFamily),
                 shadowElevation = 0.dp,
                 innerGlowColor = clear,
-                minimumHeight = 40.dp
+                minimumHeight = 38.dp,
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                iconSize = 19.dp,
+                iconLabelSpacing = 12.dp,
+                borderColor = clear
             )
+            val resting = t.text.copy(alpha = 0.78f)
             when (state) {
                 MillenniumControlState.Hovered -> flat.copy(
                     background = SolidColor(t.hover),
                     foreground = t.text,
-                    borderColor = clear
+                    iconTint = t.text
                 )
                 MillenniumControlState.Pressed -> flat.copy(
                     background = SolidColor(t.card),
                     foreground = t.text,
-                    borderColor = clear
+                    iconTint = t.text
                 )
                 MillenniumControlState.Focused -> flat.copy(
                     background = SolidColor(t.hover),
                     foreground = t.text,
+                    iconTint = t.text,
                     borderColor = t.accent
                 )
                 MillenniumControlState.Selected -> flat.copy(
                     background = SolidColor(t.card),
                     foreground = t.text,
                     iconTint = t.accent,
-                    borderColor = clear,
                     selectedIndicatorColor = t.accent
                 )
-                else -> flat.copy(borderColor = clear)
+                MillenniumControlState.Disabled -> flat.copy(foreground = t.muted, iconTint = t.muted)
+                else -> flat.copy(foreground = resting, iconTint = t.muted)
             }
         }
     )
@@ -588,6 +641,7 @@ private fun flatComponents(t: SpotubeTokens, fontFamily: FontFamily): Millennium
         cardTheme = card,
         sliderTheme = slider,
         sidebarTheme = sidebar,
+        listTileTheme = listTile,
         topAppBarTheme = MillenniumTopAppBarTheme(
             properties = base.topAppBarTheme.properties.copy(separatorColor = clear)
         ),
