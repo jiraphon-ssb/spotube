@@ -223,26 +223,17 @@ fun AppLargePlayer(
         }
     }
 
-    // A translucent tint (not near-opaque) so the blurred art behind still reads through, and
-    // the material's watery caustics sit on top of it.
-    val surfaceTint = AppTheme.colors.surface.copy(alpha = 0.6f)
-
+    // Flat, opaque panel: the redesign drops blur/translucency in favour of solid surfaces.
+    // [hazeState] stays in the signature so callers don't change.
     Column(
         modifier = modifier
+            .background(AppTheme.colors.surface)
             .windowInsetsPadding(WindowInsets.navigationBars)
     ) {
         MillenniumSeparator(modifier = Modifier.fillMaxWidth())
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .hazeEffect(state = hazeState) {
-                    blurEffect {
-                        blurRadius = 20.dp
-                        colorEffects = listOf(
-                            HazeColorEffect.tint(surfaceTint)
-                        )
-                    }
-                }
         ) {
             Row(
                 modifier = Modifier

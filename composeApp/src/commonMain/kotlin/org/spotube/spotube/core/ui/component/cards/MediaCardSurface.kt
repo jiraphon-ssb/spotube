@@ -24,6 +24,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -46,6 +48,7 @@ internal fun MediaCardSurface(
     val focused by interaction.collectIsFocusedAsState()
     var groupFocused by remember { mutableStateOf(false) }
     val colors = MillenniumTheme.colors
+    val hoverPlate = org.spotube.spotube.core.ui.theming.AppTheme.colors.hover
     val highlight by animateFloatAsState(
         if (hovered || focused || groupFocused || pressed) 1f else 0f,
         tween(140)
@@ -55,18 +58,16 @@ internal fun MediaCardSurface(
     Box(
         modifier.graphicsLayer { scaleX = scale; scaleY = scale }
             .millenniumSurface(
-                background = Brush.verticalGradient(
-                    listOf(
-                        colors.raised.copy(alpha = highlight),
-                        if (isBlacklisted) colors.danger.copy(alpha = 0.12f + highlight * 0.12f)
-                        else colors.surface.copy(alpha = highlight)
-                    )
+                // Flat hover plate (no gradient, glow or lift); focus keeps a visible ring.
+                background = SolidColor(
+                    if (isBlacklisted) colors.danger.copy(alpha = 0.12f + highlight * 0.12f)
+                    else hoverPlate.copy(alpha = highlight)
                 ),
                 shape = shape,
-                borderColor = (if (focused) colors.accent else colors.border).copy(alpha = highlight),
-                borderWidth = if (focused) 2.dp else 1.dp,
-                innerGlowColor = colors.highlight.copy(alpha = highlight * 0.4f),
-                shadowElevation = (highlight * 4f).dp
+                borderColor = colors.accent.copy(alpha = if (focused) highlight else 0f),
+                borderWidth = if (focused) 2.dp else 0.dp,
+                innerGlowColor = Color.Transparent,
+                shadowElevation = 0.dp
             )
             .clip(shape)
             .onFocusChanged { groupFocused = it.hasFocus }

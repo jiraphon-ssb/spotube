@@ -23,6 +23,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -84,6 +85,12 @@ import org.spotube.millennium.theme.MillenniumTheme
 
 val LocalAppShellBottomInset = staticCompositionLocalOf { 0.dp }
 
+/**
+ * Narrowest window that docks [AppSidePlayer]: sidebar (240) + player (320) + separators still
+ * leaves ~540dp for content, enough for two-up grids and the track list's title column.
+ */
+private val SidePlayerMinWindowWidth = 1100.dp
+
 @Composable
 fun AppShell(
     navigator: Navigator,
@@ -134,30 +141,34 @@ fun AppShell(
     ConnectionRequestDialogHost()
     PlayDestinationPickerHost()
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val useSidebar = viewModel.useSidebar()
+        // Wide windows dock the full player as a right-hand panel; narrower ones keep the
+        // bottom bar so the content column never gets squeezed below a usable width.
+        val dockPlayer = useSidebar && maxWidth >= SidePlayerMinWindowWidth
         val chromeUiState by viewModel.compactChromeUiState.collectAsState()
         val density = LocalDensity.current
         val navigationBarInset = with(density) {
             WindowInsets.navigationBars.getBottom(this).toDp()
         }
-        val bottomOverlayInset =
+        val bottomOverlayInset = if (dockPlayer) {
+            navigationBarInset
+        } else {
             viewModel.bottomOverlayInset(useSidebar, navigationBarInset, chromeUiState)
+        }
 
         CompositionLocalProvider(LocalAppShellBottomInset provides bottomOverlayInset) {
             if (useSidebar) {
                 val hazeState = rememberHazeState()
-                val bgHazeState = rememberHazeState()
 
                 Box(modifier = Modifier.fillMaxSize()) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(MillenniumTheme.colors.background)
-                            .hazeSource(state = bgHazeState) // <-- Put it here!
                     )
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        Row(modifier = Modifier.weight(1f)) {
+                    if (dockPlayer) {
+                        Row(modifier = Modifier.fillMaxSize()) {
                             AppSidebar(
                                 navigator = navigator,
                                 navigationState = navigationState
@@ -166,18 +177,42 @@ fun AppShell(
                                 modifier = Modifier.fillMaxHeight(),
                                 vertical = true
                             )
-                            Box(
-                                modifier = Modifier.weight(1f).fillMaxHeight().hazeSource(hazeState)
-                            ) {
+                            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                                 content()
                             }
+                            MillenniumSeparator(
+                                modifier = Modifier.fillMaxHeight(),
+                                vertical = true
+                            )
+                            AppSidePlayer(
+                                onQueue = queueViewModel::toggleQueueVisibility,
+                                onAlternativeSource = alternativeViewModel::toggleAlternativeVisibility,
+                                onLyrics = { navigatorCommands.navigateTo(Routes.Lyrics) })
                         }
-                        AppLargePlayer(
-                            hazeState = hazeState,
-                            modifier = Modifier.fillMaxWidth(),
-                            onQueue = queueViewModel::toggleQueueVisibility,
-                            onAlternativeSource = alternativeViewModel::toggleAlternativeVisibility,
-                            onLyrics = { navigatorCommands.navigateTo(Routes.Lyrics) })
+                    } else {
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            Row(modifier = Modifier.weight(1f)) {
+                                AppSidebar(
+                                    navigator = navigator,
+                                    navigationState = navigationState
+                                )
+                                MillenniumSeparator(
+                                    modifier = Modifier.fillMaxHeight(),
+                                    vertical = true
+                                )
+                                Box(
+                                    modifier = Modifier.weight(1f).fillMaxHeight().hazeSource(hazeState)
+                                ) {
+                                    content()
+                                }
+                            }
+                            AppLargePlayer(
+                                hazeState = hazeState,
+                                modifier = Modifier.fillMaxWidth(),
+                                onQueue = queueViewModel::toggleQueueVisibility,
+                                onAlternativeSource = alternativeViewModel::toggleAlternativeVisibility,
+                                onLyrics = { navigatorCommands.navigateTo(Routes.Lyrics) })
+                        }
                     }
 
                     if (isQueueVisible) {

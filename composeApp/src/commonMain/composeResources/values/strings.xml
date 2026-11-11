@@ -908,6 +908,10 @@
     <string name="player_collapse_content_description">Collapse player</string>
     <string name="player_expand_lyrics_content_description">Expand lyrics</string>
     <string name="player_now_playing">Now Playing</string>
+    <string name="player_up_next">Up next</string>
+    <string name="player_up_next_empty">Nothing queued after this song</string>
+    <string name="player_view_queue">View queue</string>
+    <string name="player_nothing_playing_hint">Pick a song, album or playlist to start listening.</string>
     <string name="player_lyrics">Lyrics</string>
     <string name="player_alternative_source">Alternative Source</string>
     <string name="player_alternative_source_content_description">Alternative source</string>

@@ -273,13 +273,7 @@ private fun FeaturedCarouselCard(
                     .graphicsLayer {
                         alpha = animatedAlpha
                     }
-                    .hazeEffect(state = hazeState) {
-                        blurEffect {
-                            blurRadius = 20.dp
-                            colorEffects =
-                                listOf(HazeColorEffect.tint(Color.White.copy(alpha = 0.1f)))
-                        }
-                    }
+                    .background(Color.Black.copy(alpha = 0.45f))
             )
 
         }

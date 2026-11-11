@@ -710,6 +710,10 @@
     <string name="player_collapse_content_description">ยุบเครื่องเล่น</string>
     <string name="player_expand_lyrics_content_description">ขยายเนื้อเพลง</string>
     <string name="player_now_playing">กำลังเล่น</string>
+    <string name="player_up_next">ถัดไปในคิว</string>
+    <string name="player_up_next_empty">ไม่มีเพลงต่อจากเพลงนี้</string>
+    <string name="player_view_queue">ดูคิวทั้งหมด</string>
+    <string name="player_nothing_playing_hint">เลือกเพลง อัลบั้ม หรือเพลย์ลิสต์เพื่อเริ่มฟัง</string>
     <string name="player_lyrics">เนื้อเพลง</string>
     <string name="player_alternative_source">แหล่งที่มาสำรอง</string>
     <string name="player_alternative_source_content_description">แหล่งที่มาสำรอง</string>

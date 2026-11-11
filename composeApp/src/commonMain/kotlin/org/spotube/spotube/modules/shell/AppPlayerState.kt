@@ -120,14 +120,14 @@ internal fun rememberPlayerUiState(
     return state
 }
 
-private fun QueueEntry.displayTitle(): String {
+internal fun QueueEntry.displayTitle(): String {
     return when (this) {
         is QueueEntry.StreamingTrack -> track.title
         is QueueEntry.LocalTrack -> name
     }
 }
 
-private fun QueueEntry.displayArtists(): String {
+internal fun QueueEntry.displayArtists(): String {
     return when (this) {
         is QueueEntry.StreamingTrack -> track.artists.joinToString(", ") { artist -> artist.name }
         is QueueEntry.LocalTrack -> artists.joinToString(", ")
@@ -154,4 +154,21 @@ private fun QueueEntry.durationInMilliseconds(): Long {
         is QueueEntry.StreamingTrack -> track.durationMs
         is QueueEntry.LocalTrack -> duration
     }
+}
+
+/** One row of the "Up next" list: the entry and its absolute index in the queue (for jumpTo). */
+internal data class UpNextItem(val index: Int, val entry: QueueEntry)
+
+/**
+ * The [limit] entries that will play after the current one, in queue order. Empty when nothing is
+ * playing, when the current entry is the last one, or when it can't be found in the queue.
+ */
+internal fun PlayerUiState.upNext(limit: Int = 3): List<UpNextItem> {
+    val current = currentQueueEntry ?: return emptyList()
+    val currentIndex = queue.indexOfFirst { it.url == current.url }
+    if (currentIndex < 0) return emptyList()
+    return queue.withIndex()
+        .drop(currentIndex + 1)
+        .take(limit)
+        .map { (index, entry) -> UpNextItem(index, entry) }
 }
