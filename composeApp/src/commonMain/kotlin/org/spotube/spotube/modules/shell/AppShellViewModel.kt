@@ -113,4 +113,17 @@ class AppShellViewModel : ViewModel() {
     fun toggleLyricsOverlay() {
         lyricsOverlayVisible.update { !it }
     }
+
+    private val fullPlayerVisible = MutableStateFlow(false)
+
+    /** Desktop "now playing" view that covers the whole window (artwork + lyrics/queue). */
+    val isFullPlayerVisible: StateFlow<Boolean> = fullPlayerVisible.asStateFlow()
+
+    fun showFullPlayer() {
+        fullPlayerVisible.value = true
+    }
+
+    fun hideFullPlayer() {
+        fullPlayerVisible.value = false
+    }
 }

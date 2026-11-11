@@ -84,6 +84,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -104,6 +105,7 @@ import org.spotube.spotube.core.ui.misc.shimmerApply
 import org.spotube.spotube.getPlatform
 import org.spotube.spotube.isDesktop
 import org.spotube.spotube.modules.shell.LocalAppShellBottomInset
+import org.spotube.spotube.resources.glyphs.Glyphs
 import org.spotube.spotube.resources.iconsax.Iconsax
 import org.spotube.spotube.resources.iconsax.Iconsax3DotsMore
 import org.spotube.spotube.resources.iconsax.IconsaxAddSquare
@@ -369,10 +371,8 @@ fun TrackList(
                     .fillMaxWidth()
                     .padding(top = TrackCardInnerPadding, bottom = TrackCardInnerPadding)
             ) {
+                // Rows are separated by spacing + hover plates, not hairlines.
                 visibleTracks.forEachIndexed { displayedIndex, track ->
-                    if (displayedIndex > 0) {
-                        MillenniumSeparator()
-                    }
                     trackRow(displayedIndex, track)
                 }
                 trackCardFooter()
@@ -406,7 +406,7 @@ fun TrackList(
                             selectedTrackIds = visibleTracks.map { it.id }.toSet()
                         }
                     },
-                    label = "")
+                    label = stringResource(Res.string.track_list_select_all))
             }
 
             Box(
@@ -418,7 +418,7 @@ fun TrackList(
                     label = "",
                     placeholder = stringResource(Res.string.track_list_filter_placeholder),
                     modifier = Modifier
-                        .widthIn(max = 400.dp)
+                        .widthIn(max = 320.dp)
                         .align(Alignment.CenterEnd))
             }
 
@@ -437,8 +437,9 @@ fun TrackList(
                                 onClick = onClick,
                                 style = MillenniumIconButtonStyle.Quiet) {
                                 MillenniumIcon(
-                                    imageVector = Iconsax.IconsaxSort,
-                                    contentDescription = stringResource(Res.string.track_list_sort))
+                                    imageVector = Glyphs.Sort,
+                                    contentDescription = stringResource(Res.string.track_list_sort),
+                                    tint = AppTheme.colors.onSurfaceVariant)
                             }
                         })
                 }
@@ -491,8 +492,9 @@ fun TrackList(
                                 onClick = onClick,
                                 style = MillenniumIconButtonStyle.Quiet) {
                                 MillenniumIcon(
-                                    imageVector = Iconsax.Iconsax3DotsMore,
-                                    contentDescription = stringResource(Res.string.track_list_bulk_actions))
+                                    imageVector = Glyphs.More,
+                                    contentDescription = stringResource(Res.string.track_list_bulk_actions),
+                                    tint = AppTheme.colors.onSurfaceVariant)
                             }
                         })
                 }
@@ -534,9 +536,6 @@ fun TrackList(
                 val rowKeys = uniqueLazyKeys(visibleTracks) { it.id }
                 items(visibleTracks.size, key = { TrackCardRowKeyPrefix + rowKeys[it] }) { displayedIndex ->
                     Column(Modifier.fillMaxWidth()) {
-                        if (displayedIndex > 0) {
-                            MillenniumSeparator()
-                        }
                         trackRow(displayedIndex, visibleTracks[displayedIndex])
                     }
                 }
@@ -648,7 +647,12 @@ private fun TrackListRow(
         title = {
             TextWithShimmer(
                 text = track.title,
-                style = AppTheme.typography.bodyLarge,
+                style = if (isCurrentTrack) {
+                    AppTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
+                } else {
+                    AppTheme.typography.bodyLarge
+                },
+                color = if (isCurrentTrack) AppTheme.colors.primary else AppTheme.colors.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis)
         },
@@ -685,9 +689,9 @@ private fun TrackListRow(
                             } else {
                                 TextWithShimmer(
                                     text = index.toString(),
-                                    style = AppTheme.typography.labelMedium,
+                                    style = AppTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
                                     textAlign = TextAlign.Center,
-                                    color = AppTheme.colors.onSurfaceVariant)
+                                    color = if (isCurrentTrack) AppTheme.colors.primary else AppTheme.colors.onSurfaceVariant)
                             }
                         }
                     }
@@ -719,10 +723,10 @@ private fun TrackListRow(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.10f)),
+                                .background(Color.Black.copy(alpha = 0.45f)),
                             contentAlignment = Alignment.Center) {
                             MillenniumIcon(
-                                imageVector = if (isCurrentTrack && isCurrentTrackPlaying) Iconsax.IconsaxPause else Iconsax.IconsaxPlay,
+                                imageVector = if (isCurrentTrack && isCurrentTrackPlaying) Glyphs.Pause else Glyphs.Play,
                                 contentDescription = if (isCurrentTrack && isCurrentTrackPlaying) stringResource(Res.string.player_pause_content_description) else stringResource(Res.string.player_play_content_description),
                                 tint = Color.White,
                                 modifier = Modifier.size(18.dp).shimmerApply())
@@ -744,7 +748,7 @@ private fun TrackListRow(
                     TextWithShimmer(
                         text = track.album!!.title,
                         style = AppTheme.typography.bodyMedium,
-                        color = AppTheme.colors.primary,
+                        color = if (isHovered || isPressed) AppTheme.colors.onSurface else AppTheme.colors.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier
@@ -760,7 +764,7 @@ private fun TrackListRow(
                                         onDrawWithContent {
                                             drawContent()
                                             drawLine(
-                                                color = colorScheme.primary,
+                                                color = colorScheme.onSurface,
                                                 start = Offset(0f, size.height - underlineHeight),
                                                 end = Offset(size.width, size.height - underlineHeight),
                                                 strokeWidth = underlineHeight)
@@ -791,8 +795,9 @@ private fun TrackListRow(
                         onClick = onShowOptionsClick,
                         style = MillenniumIconButtonStyle.Quiet) {
                         MillenniumIcon(
-                            imageVector = Iconsax.Iconsax3DotsMore,
-                            contentDescription = stringResource(Res.string.track_options_title))
+                            imageVector = Glyphs.More,
+                            contentDescription = stringResource(Res.string.track_options_title),
+                            tint = AppTheme.colors.onSurfaceVariant)
                     }
                 }
             }
@@ -819,11 +824,12 @@ private fun ArtistChips(
                 TextWithShimmer(
                     text = artist.name,
                     style = AppTheme.typography.bodySmall,
-                    color = AppTheme.colors.primary,
+                    color = if (isHovered || isPressed) AppTheme.colors.onSurface else AppTheme.colors.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     textDecoration = if (isHovered || isPressed) TextDecoration.Underline else null,
                     modifier = Modifier
+                        .hoverable(interactionSource)
                         .clickable(
                         indication = null,
                         interactionSource = interactionSource
@@ -843,7 +849,7 @@ private fun ArtistChips(
             TextWithShimmer(
                 text = stringResource(Res.string.track_list_more_artists, remaining),
                 style = AppTheme.typography.bodySmall,
-                color = AppTheme.colors.primary,
+                color = AppTheme.colors.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.clickable(onClick = onArtistsOverflowClick))

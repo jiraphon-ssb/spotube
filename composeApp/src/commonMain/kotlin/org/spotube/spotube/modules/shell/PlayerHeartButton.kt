@@ -62,7 +62,8 @@ fun PlayerHeartButton(
         onClick = { currentTrackId?.let { savedTracksViewModel.toggleSavedTrack(it, isLiked) } },
         enabled = isSavedTrackState is SavedState.Success,
         loading = currentTrackId != null && currentTrackId in pendingSavedTrackIds,
-        style = MillenniumIconButtonStyle.Secondary) {
+        // Quiet: a bordered circle next to the title competed with the artwork and controls.
+        style = MillenniumIconButtonStyle.Quiet) {
         MillenniumIcon(
             imageVector = if (isLiked) Iconsax.IconsaxHeart2 else Iconsax.IconsaxHeart,
             contentDescription = stringResource(if (isLiked) Res.string.player_unlike_content_description else Res.string.player_like_content_description),

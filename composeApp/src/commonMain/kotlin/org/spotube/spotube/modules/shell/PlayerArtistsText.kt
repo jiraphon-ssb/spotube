@@ -56,8 +56,10 @@ internal fun PlayerArtistsText(
                 withLink(
                     LinkAnnotation.Clickable(
                         tag = artistId,
+                        // Plain at rest; underline + accent only on hover so the title block
+                        // stays calm but the link is still discoverable.
                         styles = TextLinkStyles(
-                            style = SpanStyle(textDecoration = TextDecoration.Underline),
+                            style = SpanStyle(textDecoration = TextDecoration.None),
                             hoveredStyle = SpanStyle(
                                 color = hoverColor,
                                 textDecoration = TextDecoration.Underline),

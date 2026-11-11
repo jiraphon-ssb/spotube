@@ -103,6 +103,7 @@ import org.spotube.millennium.composables.MillenniumIconButtonStyle
 import org.spotube.millennium.composables.MillenniumSeparator
 import org.spotube.millennium.composables.MillenniumSlider
 import spotube.composeapp.generated.resources.Res
+import spotube.composeapp.generated.resources.player_expand_content_description
 import spotube.composeapp.generated.resources.player_go_to_album
 import spotube.composeapp.generated.resources.player_sleep_timer
 import spotube.composeapp.generated.resources.player_track_details
@@ -142,6 +143,7 @@ fun AppLargePlayer(
     onAlternativeSource: () -> Unit = {},
     onMoreOptions: () -> Unit = {},
     onLyrics: () -> Unit = {},
+    onExpand: () -> Unit = {},
     audioPlayer: AudioPlayerInterface = koinInject(),
     audioPlayerQueue: AudioPlayerQueue = koinInject(),
     downloadsViewModel: DownloadsViewModel = koinViewModel(),
@@ -422,6 +424,16 @@ fun AppLargePlayer(
                             style = MillenniumIconButtonStyle.Quiet, onClick = onLyrics
                         ) {
                             MillenniumIcon(Iconsax.IconsaxMusic, contentDescription = stringResource(Res.string.player_lyrics))
+                        }
+                        MillenniumIconButton(
+                            style = MillenniumIconButtonStyle.Quiet,
+                            enabled = currentEntry != null,
+                            onClick = onExpand
+                        ) {
+                            MillenniumIcon(
+                                org.spotube.spotube.resources.glyphs.Glyphs.Expand,
+                                contentDescription = stringResource(Res.string.player_expand_content_description)
+                            )
                         }
                         val goToAlbumLabel = stringResource(Res.string.player_go_to_album)
                         val sleepTimerLabel = stringResource(Res.string.player_sleep_timer)

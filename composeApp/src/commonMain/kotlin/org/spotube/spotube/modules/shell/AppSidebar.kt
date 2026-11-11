@@ -55,6 +55,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.Text
 import org.spotube.spotube.NavigationItem
+import org.spotube.spotube.PlatformType
+import org.spotube.spotube.getPlatform
 import org.spotube.spotube.core.navigation.NavigationState
 import org.spotube.spotube.core.navigation.Navigator
 import org.spotube.spotube.core.navigation.Routes
@@ -89,6 +91,9 @@ import spotube.composeapp.generated.resources.settings_screen_title
 import spotube.composeapp.generated.resources.support_button_label
 import spotube.composeapp.generated.resources.shell_sidebar_toggle_content_description
 
+/** Extra top space so the macOS close/minimise/zoom buttons (≈28pt title bar) clear the logo. */
+private val MacTrafficLightsInset = 18.dp
+
 @Composable
 fun AppSidebar(
     navigator: Navigator,
@@ -104,6 +109,11 @@ fun AppSidebar(
     val groupExpansion = remember { mutableStateMapOf<String, Boolean>() }
     val currentLibraryTab by libraryState.currentTab.collectAsState()
     val openSupport = LocalSupportPrompt.current
+    // The desktop window draws content under the title bar. On macOS the native traffic lights
+    // sit in the top-left corner, i.e. over this header, so push the header below them.
+    val trafficLightsInset = remember {
+        if (getPlatform().type == PlatformType.MacOS) MacTrafficLightsInset else 0.dp
+    }
 
     MillenniumSidebar(
         modifier = modifier,
@@ -113,7 +123,7 @@ fun AppSidebar(
     ) {
         MillenniumSidebarHeader {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(top = trafficLightsInset),
                 horizontalArrangement = if (expanded) Arrangement.SpaceBetween else Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {

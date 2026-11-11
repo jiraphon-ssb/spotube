@@ -119,8 +119,9 @@ fun TrackOptions(
                 onClick = onClick,
                 style = MillenniumIconButtonStyle.Quiet) {
                 MillenniumIcon(
-                    imageVector = Iconsax.Iconsax3DotsMore,
+                    imageVector = org.spotube.spotube.resources.glyphs.Glyphs.More,
                     contentDescription = stringResource(Res.string.track_options_title),
+                    tint = org.spotube.spotube.core.ui.theming.AppTheme.colors.onSurfaceVariant,
                     modifier = Modifier.shimmerApply()
                 )
             }

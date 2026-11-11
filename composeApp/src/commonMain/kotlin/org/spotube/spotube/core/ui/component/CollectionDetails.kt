@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import org.spotube.spotube.core.ui.misc.TextWithShimmer
 import org.spotube.spotube.core.ui.misc.shimmerApply
+import org.spotube.spotube.resources.glyphs.Glyphs
 import org.spotube.spotube.resources.iconsax.Iconsax
 import org.spotube.spotube.resources.iconsax.IconsaxAddSquare
 import org.spotube.spotube.resources.iconsax.IconsaxEdit
@@ -120,8 +121,9 @@ fun CollectionDetails(
                 }
             } else {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    // Desktop puts play/shuffle and the icon actions on one line.
+                    modifier = if (isCompact) Modifier.fillMaxWidth() else Modifier,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     val modifier = if (isCompact) {
                         Modifier.weight(1f)
                     } else {
@@ -133,8 +135,10 @@ fun CollectionDetails(
                         onClick = onPlay,
                         loading = isPlayLoading) {
                         MillenniumIcon(
-                            imageVector = if (isPlaying) Iconsax.IconsaxPauseCircle else Iconsax.IconsaxPlayCircle2,
-                            contentDescription = if (isPlaying) stringResource(Res.string.player_pause_content_description) else stringResource(Res.string.player_play_content_description))
+                            imageVector = if (isPlaying) Glyphs.Pause else Glyphs.Play,
+                            contentDescription = null,
+                            tint = AppTheme.colors.onAccentFill,
+                            size = 18.dp)
                         TextWithShimmer(text = if (isPlaying) stringResource(Res.string.player_pause_content_description) else stringResource(Res.string.player_play_content_description))
                     }
                     MillenniumButton(
@@ -143,7 +147,10 @@ fun CollectionDetails(
                         loading = isShuffleLoading,
                         style = MillenniumButtonStyle.Secondary
                     ) {
-                        MillenniumIcon(imageVector = Iconsax.IconsaxShuffle, contentDescription = stringResource(Res.string.collection_details_shuffle_play))
+                        MillenniumIcon(
+                            imageVector = Glyphs.Shuffle,
+                            contentDescription = stringResource(Res.string.collection_details_shuffle_play),
+                            size = 18.dp)
                         TextWithShimmer(text = stringResource(Res.string.collection_details_shuffle))
                     }
                 }
@@ -157,11 +164,11 @@ fun CollectionDetails(
                     loading = isAddToQueueLoading,
                     style = MillenniumIconButtonStyle.Quiet) {
                     MillenniumIcon(
-                        imageVector = Iconsax.IconsaxAddSquare,
-                        contentDescription = stringResource(Res.string.player_add_to_queue_content_description)
+                        imageVector = Glyphs.AddTo,
+                        contentDescription = stringResource(Res.string.player_add_to_queue_content_description),
+                        tint = AppTheme.colors.onSurfaceVariant
                     )
                 }
-                MillenniumSeparator(modifier = Modifier.height(24.dp), vertical = true)
                 if (showFollowButton) {
                     if (isFollowing) {
                         MillenniumIconButton(
@@ -170,7 +177,8 @@ fun CollectionDetails(
                             style = MillenniumIconButtonStyle.Quiet) {
                             MillenniumIcon(
                                 imageVector = Iconsax.IconsaxHeart2,
-                                contentDescription = stringResource(Res.string.collection_details_unfollow))
+                                contentDescription = stringResource(Res.string.collection_details_unfollow),
+                                tint = AppTheme.colors.primary)
                         }
                     } else {
                         MillenniumIconButton(
@@ -185,7 +193,6 @@ fun CollectionDetails(
                     }
                 }
                 if (onEdit != null) {
-                    MillenniumSeparator(modifier = Modifier.height(24.dp), vertical = true)
                     MillenniumIconButton(
                         onClick = onEdit,
                         style = MillenniumIconButtonStyle.Quiet) {
@@ -233,8 +240,8 @@ fun CollectionDetails(
         val artwork = @Composable {
             Box(
                 modifier = Modifier
-                    .size(if (isCompact) 100.dp else 200.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .size(if (isCompact) 100.dp else 224.dp)
+                    .clip(RoundedCornerShape(14.dp))
                     .sharedElementOrNone(
                         key = sharedElementKey,
                         sharedTransitionScope = sharedTransitionScope,
@@ -266,16 +273,16 @@ fun CollectionDetails(
             Column {
                 TextWithShimmer(
                     text = title,
-                    style = if (isCompact) AppTheme.typography.bodyLarge else AppTheme.typography.headlineLarge,
-                    maxLines = 1,
+                    style = if (isCompact) AppTheme.typography.titleLarge else AppTheme.typography.displaySmall,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis)
 
                 if (description.isNotBlank()) {
                     TextWithShimmer(
                         text = description,
-                        style = if (isCompact) AppTheme.typography.labelSmall else AppTheme.typography.bodyMedium,
+                        style = if (isCompact) AppTheme.typography.bodySmall else AppTheme.typography.bodyMedium,
                         color = AppTheme.colors.onSurfaceVariant,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis)
                 }
             }
@@ -311,18 +318,24 @@ fun CollectionDetails(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.Top) {
+                        .padding(20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                    verticalAlignment = Alignment.Bottom) {
                     artwork()
 
+                    // Bottom-aligned with the artwork: title block, owner, then one action row.
                     Column(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         metadata()
                         ownerInfo()
-                        actions()
-                        playPauseButton()
+                        Row(
+                            modifier = Modifier.padding(top = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            playPauseButton()
+                            actions()
+                        }
                     }
                 }
             }

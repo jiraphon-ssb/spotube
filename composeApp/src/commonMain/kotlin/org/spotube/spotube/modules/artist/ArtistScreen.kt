@@ -85,6 +85,8 @@ import org.spotube.spotube.core.ui.component.cards.PlayableCard
 import org.spotube.spotube.core.ui.component.dragScrollable
 import org.spotube.spotube.core.ui.misc.SkeletonTree
 import org.spotube.spotube.modules.library.playlist.AddToPlaylistPicker
+import org.spotube.spotube.core.ui.component.ErrorDisplay
+import org.spotube.spotube.resources.glyphs.Glyphs
 import org.spotube.spotube.resources.iconsax.Iconsax
 import org.spotube.spotube.resources.iconsax.IconsaxAddSquare
 import org.spotube.spotube.resources.iconsax.IconsaxPlay
@@ -330,19 +332,9 @@ private fun ArtistErrorContent(
             .fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Text(
-                text = message,
-                color = AppTheme.colors.error,
-                style = AppTheme.typography.bodyLarge
-            )
-            MillenniumButton(onClick = onRetry) {
-                Text(stringResource(Res.string.common_retry))
-            }
-        }
+        // Same error surface as the rest of the app (summary, copyable details, retry) instead
+        // of dumping the raw exception text across the page.
+        ErrorDisplay(errorMessage = message, onRetry = onRetry)
     }
 }
 
@@ -394,8 +386,9 @@ private fun ArtistHeaderCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(20.dp),
-                    horizontalArrangement = Arrangement.spacedBy(20.dp),
-                    verticalAlignment = Alignment.Top
+                    horizontalArrangement = Arrangement.spacedBy(28.dp),
+                    // Name/actions sit on the avatar's baseline, like the playlist header.
+                    verticalAlignment = Alignment.Bottom
                 ) {
                     ArtistAvatar(
                         artist = artist,
@@ -468,8 +461,8 @@ private fun ArtistMeta(
     ) {
         Text(
             text = artist.name,
-            style = if (isCompact) AppTheme.typography.headlineSmall else AppTheme.typography.headlineLarge,
-            fontWeight = FontWeight.SemiBold,
+            style = if (isCompact) AppTheme.typography.headlineSmall else AppTheme.typography.displaySmall,
+            fontWeight = FontWeight.Bold,
             textAlign = if (isCompact) TextAlign.Center else TextAlign.Start,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
@@ -493,7 +486,7 @@ private fun ArtistMeta(
                 text = it,
                 style = AppTheme.typography.bodyMedium,
                 color = AppTheme.colors.onSurfaceVariant,
-                maxLines = if (isCompact) 4 else 6,
+                maxLines = if (isCompact) 4 else 3,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = if (isCompact) TextAlign.Center else TextAlign.Start
             )
@@ -538,10 +531,10 @@ private fun ArtistHeaderActions(
             if (isBlacklisted) {
                 MillenniumIconButton(
                     onClick = onBlacklistClick,
-                    style = MillenniumIconButtonStyle.Secondary
+                    style = MillenniumIconButtonStyle.Quiet
                 ) {
                     MillenniumIcon(
-                        imageVector = Iconsax.IconsaxUserRemove,
+                        imageVector = Glyphs.UserBlock,
                         contentDescription = stringResource(Res.string.blacklist_remove),
                         tint = AppTheme.colors.error
                     )
@@ -549,11 +542,12 @@ private fun ArtistHeaderActions(
             } else {
                 MillenniumIconButton(
                     onClick = onBlacklistClick,
-                    style = MillenniumIconButtonStyle.Secondary
+                    style = MillenniumIconButtonStyle.Quiet
                 ) {
                     MillenniumIcon(
-                        imageVector = Iconsax.IconsaxUserRemove,
-                        contentDescription = stringResource(Res.string.blacklist_add)
+                        imageVector = Glyphs.UserBlock,
+                        contentDescription = stringResource(Res.string.blacklist_add),
+                        tint = AppTheme.colors.onSurfaceVariant
                     )
                 }
             }
@@ -581,27 +575,33 @@ private fun TopTracksHeader(
             fontWeight = FontWeight.SemiBold
         )
 
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            MillenniumIconButton(
-                onClick = onPlay,
-                loading = isPlayLoading,
-                style = MillenniumIconButtonStyle.Primary
-            ) {
-                MillenniumIcon(
-                    imageVector = Iconsax.IconsaxPlay,
-                    contentDescription = stringResource(Res.string.artist_play_top_tracks),
-                    tint = LocalTextStyle.current.color
-                )
-            }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             MillenniumIconButton(
                 onClick = onAddToQueue,
                 loading = isAddToQueueLoading,
-                style = MillenniumIconButtonStyle.Secondary
+                style = MillenniumIconButtonStyle.Quiet
             ) {
                 MillenniumIcon(
-                    imageVector = Iconsax.IconsaxAddSquare,
-                    contentDescription = stringResource(Res.string.artist_add_top_tracks_to_queue)
+                    imageVector = Glyphs.AddTo,
+                    contentDescription = stringResource(Res.string.artist_add_top_tracks_to_queue),
+                    tint = AppTheme.colors.onSurfaceVariant
                 )
+            }
+            MillenniumButton(
+                onClick = onPlay,
+                loading = isPlayLoading,
+                style = MillenniumButtonStyle.Primary
+            ) {
+                MillenniumIcon(
+                    imageVector = Glyphs.Play,
+                    contentDescription = null,
+                    tint = AppTheme.colors.onAccentFill,
+                    size = 18.dp
+                )
+                Text(stringResource(Res.string.artist_play_top_tracks))
             }
         }
     }

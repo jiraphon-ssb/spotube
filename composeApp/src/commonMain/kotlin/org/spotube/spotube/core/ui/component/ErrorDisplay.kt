@@ -41,6 +41,8 @@ import org.spotube.millennium.composables.MillenniumIcon
 import org.spotube.millennium.composables.MillenniumIconButton
 import org.spotube.millennium.composables.MillenniumIconButtonStyle
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
@@ -93,32 +95,53 @@ fun ErrorDisplay(
     }
     var showFullLog by remember { mutableStateOf(false) }
     val clipboardManager = LocalClipboardManager.current
+    // A decode failure means the plugin returned a shape it can't parse (e.g. an unexpected
+    // null). Retrying won't help; updating/switching the plugin will, so say that instead.
+    val isPluginDataError = remember(errorMessage) {
+        "JsonDecodingException" in errorMessage || "SerializationException" in errorMessage
+    }
 
     Column(
+        // Centered, readable measure wherever it's placed (lazy list items included).
         modifier = modifier
+            .fillMaxWidth()
+            .wrapContentWidth(Alignment.CenterHorizontally)
+            .widthIn(max = 560.dp)
             .fillMaxWidth()
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        MillenniumIcon(
-            imageVector = FeatherIcons.AlertCircle,
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = AppTheme.colors.error.copy(alpha = 0.7f))
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(AppTheme.shapes.large)
+                .background(AppTheme.colors.errorContainer),
+            contentAlignment = Alignment.Center) {
+            MillenniumIcon(
+                imageVector = FeatherIcons.AlertCircle,
+                contentDescription = null,
+                modifier = Modifier.size(26.dp),
+                tint = AppTheme.colors.error)
+        }
 
-        Text(
-            text = stringResource(Res.string.error_title),
-            style = AppTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = AppTheme.colors.onSurface,
-            textAlign = TextAlign.Center)
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = stringResource(
+                    if (isPluginDataError) Res.string.error_plugin_data_title else Res.string.error_title),
+                style = AppTheme.typography.titleLarge,
+                color = AppTheme.colors.onSurface,
+                textAlign = TextAlign.Center)
 
-        Text(
-            text = stringResource(Res.string.error_description),
-            style = AppTheme.typography.bodyMedium,
-            color = AppTheme.colors.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            lineHeight = AppTheme.typography.bodyMedium.lineHeight * 1.2)
+            Text(
+                text = stringResource(
+                    if (isPluginDataError) Res.string.error_plugin_data_description
+                    else Res.string.error_description),
+                style = AppTheme.typography.bodyMedium,
+                color = AppTheme.colors.onSurfaceVariant,
+                textAlign = TextAlign.Center)
+        }
 
         MillenniumCard(
             modifier = Modifier.fillMaxWidth(),
@@ -172,7 +195,7 @@ fun ErrorDisplay(
                             style = AppTheme.typography.bodySmall.copy(
                                 fontFamily = FontFamily.Monospace),
                             color = AppTheme.colors.onSurfaceVariant,
-                            maxLines = 5,
+                            maxLines = 3,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(12.dp))
                     }

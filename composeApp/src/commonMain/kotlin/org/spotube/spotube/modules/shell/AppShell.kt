@@ -111,6 +111,7 @@ fun AppShell(
     val isQueueVisible by queueViewModel.isQueueVisible.collectAsState()
     val isAlternativeVisible by alternativeViewModel.isAlternativeVisible.collectAsState()
     val isLyricsOverlayVisible by viewModel.isLyricsOverlayVisible.collectAsState()
+    val isFullPlayerVisible by viewModel.isFullPlayerVisible.collectAsState()
 
     LaunchedEffect(navigatorCommands, navigator) {
         launch {
@@ -184,10 +185,13 @@ fun AppShell(
                                 modifier = Modifier.fillMaxHeight(),
                                 vertical = true
                             )
-                            AppSidePlayer(
+                            // Not composed under the full-window player: both would share
+                            // PlayerOptionsViewModel, doubling its dialogs and "More" menu.
+                            if (!isFullPlayerVisible) AppSidePlayer(
                                 onQueue = queueViewModel::toggleQueueVisibility,
                                 onAlternativeSource = alternativeViewModel::toggleAlternativeVisibility,
-                                onLyrics = { navigatorCommands.navigateTo(Routes.Lyrics) })
+                                onLyrics = { navigatorCommands.navigateTo(Routes.Lyrics) },
+                                onExpand = viewModel::showFullPlayer)
                         }
                     } else {
                         Column(modifier = Modifier.fillMaxSize()) {
@@ -206,13 +210,23 @@ fun AppShell(
                                     content()
                                 }
                             }
-                            AppLargePlayer(
+                            if (!isFullPlayerVisible) AppLargePlayer(
                                 hazeState = hazeState,
                                 modifier = Modifier.fillMaxWidth(),
                                 onQueue = queueViewModel::toggleQueueVisibility,
                                 onAlternativeSource = alternativeViewModel::toggleAlternativeVisibility,
-                                onLyrics = { navigatorCommands.navigateTo(Routes.Lyrics) })
+                                onLyrics = { navigatorCommands.navigateTo(Routes.Lyrics) },
+                                onExpand = viewModel::showFullPlayer)
                         }
+                    }
+
+                    // Full-window player sits under the queue / alternative-source sheets so
+                    // those still open on top of it.
+                    if (isFullPlayerVisible) {
+                        AppFullPlayer(
+                            onCollapse = viewModel::hideFullPlayer,
+                            onAlternativeSource = alternativeViewModel::toggleAlternativeVisibility
+                        )
                     }
 
                     if (isQueueVisible) {

@@ -596,11 +596,17 @@
     <!-- Media cards -->
     <string name="media_user">ผู้ใช้</string>
     <string name="media_playlist">เพลย์ลิสต์</string>
+    <string name="media_album">อัลบั้ม</string>
+    <string name="media_song">เพลง</string>
+    <string name="featured_open">เปิดดู</string>
+    <string name="featured_show_item">แสดง %1$s</string>
 
     <!-- Error display -->
-    <string name="error_title">ขออภัยเป็นอย่างยิ่ง</string>
-    <string name="error_description">มีบางอย่างทำงานไม่ถูกต้องในขณะนี้ ประสบการณ์ของคุณสำคัญสำหรับเรา และเรากำลังพยายามแก้ไขอย่างเต็มที่ โปรดลองอีกครั้งหรือตรวจสอบรายละเอียดข้อผิดพลาดด้านล่าง</string>
+    <string name="error_title">โหลดหน้านี้ไม่สำเร็จ</string>
+    <string name="error_description">ตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง ถ้ายังเกิดซ้ำ คัดลอกรายละเอียดด้านล่างไปแจ้งปัญหาได้</string>
     <string name="error_details">รายละเอียดข้อผิดพลาด</string>
+    <string name="error_plugin_data_title">ปลั๊กอินส่งข้อมูลที่อ่านไม่ได้</string>
+    <string name="error_plugin_data_description">มักเกิดจากปลั๊กอิน metadata ที่ต้องอัปเดต อัปเดตหรือเปลี่ยนปลั๊กอินได้ที่การตั้งค่า แล้วลองอีกครั้ง</string>
     <string name="error_copy_to_clipboard">คัดลอกไปยังคลิปบอร์ด</string>
     <string name="error_view_full_log">ดูบันทึกทั้งหมด</string>
     <string name="error_full_log_title">บันทึกข้อผิดพลาดทั้งหมด</string>
@@ -633,6 +639,7 @@
     <string name="track_list_sort_album">อัลบั้ม</string>
     <string name="track_list_sort_duration">ความยาว</string>
     <string name="track_list_sort">เรียงลำดับ</string>
+    <string name="track_list_select_all">เลือกทั้งหมด</string>
     <string name="track_list_no_tracks">ไม่พบเพลง</string>
     <string name="track_list_filter_placeholder">กรอง</string>
     <string name="track_list_bulk_actions">การดำเนินการแบบกลุ่ม</string>
@@ -714,6 +721,7 @@
     <string name="player_up_next_empty">ไม่มีเพลงต่อจากเพลงนี้</string>
     <string name="player_view_queue">ดูคิวทั้งหมด</string>
     <string name="player_nothing_playing_hint">เลือกเพลง อัลบั้ม หรือเพลย์ลิสต์เพื่อเริ่มฟัง</string>
+    <string name="player_expand_content_description">ขยายเครื่องเล่นเต็มหน้าต่าง</string>
     <string name="player_lyrics">เนื้อเพลง</string>
     <string name="player_alternative_source">แหล่งที่มาสำรอง</string>
     <string name="player_alternative_source_content_description">แหล่งที่มาสำรอง</string>

@@ -18,6 +18,7 @@
 package org.spotube.spotube.core.ui.theming
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -499,7 +500,14 @@ private fun flatComponents(t: SpotubeTokens, fontFamily: FontFamily): Millennium
 
     val slider = base.sliderTheme.copy(
         states = base.sliderTheme.states.mapStates { _, s ->
+            // Thin track + small round thumb (Millennium default is a 10dp gel track with a
+            // 24dp rounded-square thumb). The 44dp touch target is kept.
             s.copy(
+                trackShape = CircleShape,
+                thumbShape = CircleShape,
+                trackHeight = 4.dp,
+                thumbSize = 12.dp,
+                activeThumbSize = 16.dp,
                 trackBackground = SolidColor(t.hover),
                 activeTrackBackground = SolidColor(t.text),
                 thumbBackground = SolidColor(t.text),
@@ -524,6 +532,9 @@ private fun flatComponents(t: SpotubeTokens, fontFamily: FontFamily): Millennium
                 innerGlowColor = clear
             )
         },
+        // The nav list is short; an always-visible scrollbar track just reads as a stray line.
+        // It still scrolls with the wheel/trackpad on short windows.
+        content = sidebarBase.content.mapStates { _, s -> s.copy(showScrollbar = false) },
         group = sidebarBase.group.mapStates { _, s ->
             s.copy(
                 labelStyle = s.labelStyle.copy(

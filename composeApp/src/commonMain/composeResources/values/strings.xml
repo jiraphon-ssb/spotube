@@ -784,6 +784,10 @@
     <!-- Media cards -->
     <string name="media_user">User</string>
     <string name="media_playlist">Playlist</string>
+    <string name="media_album">Album</string>
+    <string name="media_song">Song</string>
+    <string name="featured_open">Open</string>
+    <string name="featured_show_item">Show %1$s</string>
 
     <!-- Login required -->
     <string name="login_required_title">Sign in to continue</string>
@@ -792,9 +796,11 @@
     <string name="login_required_action">Sign in</string>
 
     <!-- Error display -->
-    <string name="error_title">We\'re Truly Sorry</string>
-    <string name="error_description">Something isn\'t working right now. Your experience matters to us, and we\'re doing our best to fix this. Please try again or check the error details below.</string>
+    <string name="error_title">Couldn\'t load this page</string>
+    <string name="error_description">Check your connection and try again. If it keeps happening, copy the details below when you report it.</string>
     <string name="error_details">Error Details</string>
+    <string name="error_plugin_data_title">The plugin sent data Spotube can\'t read</string>
+    <string name="error_plugin_data_description">This usually means the metadata plugin needs an update. Update or switch it in Settings, then try again.</string>
     <string name="error_copy_to_clipboard">Copy to clipboard</string>
     <string name="error_view_full_log">View full log</string>
     <string name="error_full_log_title">Full Error Log</string>
@@ -827,6 +833,7 @@
     <string name="track_list_sort_album">Album</string>
     <string name="track_list_sort_duration">Duration</string>
     <string name="track_list_sort">Sort</string>
+    <string name="track_list_select_all">Select all</string>
     <string name="track_list_no_tracks">No tracks found</string>
     <string name="track_list_filter_placeholder">Filter</string>
     <string name="track_list_bulk_actions">Bulk actions</string>
@@ -912,6 +919,7 @@
     <string name="player_up_next_empty">Nothing queued after this song</string>
     <string name="player_view_queue">View queue</string>
     <string name="player_nothing_playing_hint">Pick a song, album or playlist to start listening.</string>
+    <string name="player_expand_content_description">Expand player</string>
     <string name="player_lyrics">Lyrics</string>
     <string name="player_alternative_source">Alternative Source</string>
     <string name="player_alternative_source_content_description">Alternative source</string>
