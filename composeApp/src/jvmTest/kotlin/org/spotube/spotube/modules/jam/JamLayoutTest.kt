@@ -27,7 +27,6 @@ import org.spotube.spotube.core.navigation.Navigator
 import org.spotube.spotube.core.navigation.Routes
 import org.spotube.spotube.core.navigation.TOP_LEVEL_ROUTES
 import org.spotube.spotube.core.navigation.rememberNavigationState
-import org.spotube.spotube.modules.settings.Theme
 import org.spotube.spotube.modules.settings.UserSettings
 import org.spotube.spotube.modules.shell.AppShellViewModel
 import org.spotube.spotube.modules.shell.FloatingPlayerContent
@@ -108,7 +107,7 @@ class JamLayoutTest {
                 var navigationTop = Float.NaN
                 var navigationBottom = Float.NaN
                 ImageComposeScene(width, 760) {
-                    SpotubeTheme(UserSettings(theme = Theme.DARK)) {
+                    SpotubeTheme(UserSettings()) {
                         Column(
                             Modifier.fillMaxSize().background(MillenniumTheme.colors.background),
                             horizontalAlignment = Alignment.CenterHorizontally

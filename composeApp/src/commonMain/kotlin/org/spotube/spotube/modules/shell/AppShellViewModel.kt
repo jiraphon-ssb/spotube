@@ -126,4 +126,13 @@ class AppShellViewModel : ViewModel() {
     fun hideFullPlayer() {
         fullPlayerVisible.value = false
     }
+
+    private val nowPlayingPanelVisible = MutableStateFlow(true)
+
+    /** The optional right-hand now-playing info panel (wide windows only). */
+    val isNowPlayingPanelVisible: StateFlow<Boolean> = nowPlayingPanelVisible.asStateFlow()
+
+    fun toggleNowPlayingPanel() {
+        nowPlayingPanelVisible.update { !it }
+    }
 }

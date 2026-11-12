@@ -86,8 +86,8 @@ import org.spotube.millennium.theme.MillenniumTheme
 val LocalAppShellBottomInset = staticCompositionLocalOf { 0.dp }
 
 /**
- * Narrowest window that docks [AppSidePlayer]: sidebar (240) + player (320) + separators still
- * leaves ~540dp for content, enough for two-up grids and the track list's title column.
+ * Narrowest window that can show the now-playing info panel ([AppSidePlayer]) next to the content:
+ * sidebar (240) + panel (320) still leaves ~540dp for content.
  */
 private val SidePlayerMinWindowWidth = 1100.dp
 
@@ -112,6 +112,7 @@ fun AppShell(
     val isAlternativeVisible by alternativeViewModel.isAlternativeVisible.collectAsState()
     val isLyricsOverlayVisible by viewModel.isLyricsOverlayVisible.collectAsState()
     val isFullPlayerVisible by viewModel.isFullPlayerVisible.collectAsState()
+    val isNowPlayingPanelVisible by viewModel.isNowPlayingPanelVisible.collectAsState()
 
     LaunchedEffect(navigatorCommands, navigator) {
         launch {
@@ -152,15 +153,14 @@ fun AppShell(
         val navigationBarInset = with(density) {
             WindowInsets.navigationBars.getBottom(this).toDp()
         }
-        val bottomOverlayInset = if (dockPlayer) {
-            navigationBarInset
-        } else {
+        val bottomOverlayInset =
             viewModel.bottomOverlayInset(useSidebar, navigationBarInset, chromeUiState)
-        }
 
-        CompositionLocalProvider(LocalAppShellBottomInset provides bottomOverlayInset) {
+        // With a sidebar the transport bar sits *below* the content in a Column, so content needs
+        // no bottom padding; the overlay inset is still used to lift the snackbar above the bar.
+        val contentBottomInset = if (useSidebar) 0.dp else bottomOverlayInset
+        CompositionLocalProvider(LocalAppShellBottomInset provides contentBottomInset) {
             if (useSidebar) {
-                val hazeState = rememberHazeState()
 
                 Box(modifier = Modifier.fillMaxSize()) {
                     Box(
@@ -168,8 +168,12 @@ fun AppShell(
                             .fillMaxSize()
                             .background(MillenniumTheme.colors.background)
                     )
-                    if (dockPlayer) {
-                        Row(modifier = Modifier.fillMaxSize()) {
+                    // Transport always lives in the bottom bar; the right-hand panel is optional
+                    // now-playing info (artwork, up next) on wide windows. Neither is composed
+                    // under the full-window player (they share PlayerOptionsViewModel).
+                    val showInfoPanel = dockPlayer && isNowPlayingPanelVisible && !isFullPlayerVisible
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        Row(modifier = Modifier.weight(1f)) {
                             AppSidebar(
                                 navigator = navigator,
                                 navigationState = navigationState
@@ -181,43 +185,27 @@ fun AppShell(
                             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                                 content()
                             }
-                            MillenniumSeparator(
-                                modifier = Modifier.fillMaxHeight(),
-                                vertical = true
-                            )
-                            // Not composed under the full-window player: both would share
-                            // PlayerOptionsViewModel, doubling its dialogs and "More" menu.
-                            if (!isFullPlayerVisible) AppSidePlayer(
-                                onQueue = queueViewModel::toggleQueueVisibility,
-                                onAlternativeSource = alternativeViewModel::toggleAlternativeVisibility,
-                                onLyrics = { navigatorCommands.navigateTo(Routes.Lyrics) },
-                                onExpand = viewModel::showFullPlayer)
-                        }
-                    } else {
-                        Column(modifier = Modifier.fillMaxSize()) {
-                            Row(modifier = Modifier.weight(1f)) {
-                                AppSidebar(
-                                    navigator = navigator,
-                                    navigationState = navigationState
-                                )
+                            if (showInfoPanel) {
                                 MillenniumSeparator(
                                     modifier = Modifier.fillMaxHeight(),
                                     vertical = true
                                 )
-                                Box(
-                                    modifier = Modifier.weight(1f).fillMaxHeight().hazeSource(hazeState)
-                                ) {
-                                    content()
-                                }
+                                AppSidePlayer(
+                                    onQueue = queueViewModel::toggleQueueVisibility,
+                                    onExpand = viewModel::showFullPlayer,
+                                    onClose = viewModel::toggleNowPlayingPanel
+                                )
                             }
-                            if (!isFullPlayerVisible) AppLargePlayer(
-                                hazeState = hazeState,
-                                modifier = Modifier.fillMaxWidth(),
-                                onQueue = queueViewModel::toggleQueueVisibility,
-                                onAlternativeSource = alternativeViewModel::toggleAlternativeVisibility,
-                                onLyrics = { navigatorCommands.navigateTo(Routes.Lyrics) },
-                                onExpand = viewModel::showFullPlayer)
                         }
+                        if (!isFullPlayerVisible) AppLargePlayer(
+                            modifier = Modifier.fillMaxWidth(),
+                            onQueue = queueViewModel::toggleQueueVisibility,
+                            onAlternativeSource = alternativeViewModel::toggleAlternativeVisibility,
+                            onLyrics = { navigatorCommands.navigateTo(Routes.Lyrics) },
+                            onExpand = viewModel::showFullPlayer,
+                            panelVisible = showInfoPanel,
+                            onTogglePanel = if (dockPlayer) viewModel::toggleNowPlayingPanel else null
+                        )
                     }
 
                     // Full-window player sits under the queue / alternative-source sheets so

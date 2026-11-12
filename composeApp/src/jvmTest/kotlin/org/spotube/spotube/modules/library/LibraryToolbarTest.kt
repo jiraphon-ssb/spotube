@@ -18,7 +18,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.use
 import androidx.lifecycle.viewModelScope
 import org.spotube.spotube.core.ui.theming.SpotubeTheme
-import org.spotube.spotube.modules.settings.Theme
 import org.spotube.spotube.modules.settings.UserSettings
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -156,7 +155,7 @@ class LibraryToolbarTest {
                     canChangeView = tab != LibraryTab.LocalTracks
                 )
                 ImageComposeScene(width, 88) {
-                    SpotubeTheme(UserSettings(theme = Theme.DARK)) {
+                    SpotubeTheme(UserSettings()) {
                         MillenniumTopAppBar(
                             title = {
                                 LibraryToolbarTitle(

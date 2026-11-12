@@ -121,11 +121,6 @@
     <string name="settings_country_subtitle_current">Land voor content en beschikbaarheid. Huidig: %1$s</string>
     <string name="settings_option_name_and_code">%1$s (%2$s)</string>
 
-    <string name="settings_theme_title">Thema</string>
-    <string name="settings_theme_subtitle_current">Kies hoe Spotube aansluit op de weergave van je systeem. Huidig: %1$s</string>
-    <string name="settings_theme_light">Licht</string>
-    <string name="settings_theme_dark">Donker</string>
-    <string name="settings_theme_system">Systeem</string>
 
     <string name="settings_surface_theme_title">Oppervlak</string>
     <string name="settings_surface_theme_subtitle_current">Achtergrondmateriaal van de app. Huidig: %1$s</string>

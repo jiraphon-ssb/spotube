@@ -56,7 +56,7 @@ fun LibraryPlaylistsScreen(
                     }
                 } else {
                     LibraryMediaCollection<MetadataPlaylist>(
-                        items = data?.items.orEmpty(), itemKey = { it.id }, viewMode = viewMode,
+                        items = data?.items.orEmpty(), itemKey = { it.id }, viewMode = viewMode, indexLabel = { it.title },
                         loading = current is LibraryPlaylistsState.Loading,
                         loadingMore = current is LibraryPlaylistsState.Data.LoadingMore,
                         onViewportChanged = viewModel::onItemsVisible,

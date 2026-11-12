@@ -119,11 +119,6 @@
     <string name="settings_country_subtitle_current">콘텐츠 및 이용 가능 여부에 적용되는 국가입니다. 현재: %1$s</string>
     <string name="settings_option_name_and_code">%1$s (%2$s)</string>
 
-    <string name="settings_theme_title">테마</string>
-    <string name="settings_theme_subtitle_current">Spotube가 시스템 화면 모드를 따르는 방식을 선택하세요. 현재: %1$s</string>
-    <string name="settings_theme_light">라이트</string>
-    <string name="settings_theme_dark">다크</string>
-    <string name="settings_theme_system">시스템</string>
 
     <string name="settings_surface_theme_title">표면</string>
     <string name="settings_surface_theme_subtitle_current">앱의 배경 재질입니다. 현재: %1$s</string>

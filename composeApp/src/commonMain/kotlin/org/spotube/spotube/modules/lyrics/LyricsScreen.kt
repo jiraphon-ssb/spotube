@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -82,20 +83,17 @@ import spotube.composeapp.generated.resources.common_close
 fun LyricsScreen(
     viewModel: LyricsViewModel = koinViewModel(),
     modifier: Modifier = Modifier,
-    onClose: (() -> Unit)? = null) {
+    onClose: (() -> Unit)? = null,
+    /** Hosted inside another surface (the full-window player): no back/close button. */
+    embedded: Boolean = false) {
     val uiState by viewModel.uiState.collectAsState()
     val colors = MillenniumTheme.colors
 
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    0f to colors.accent.copy(alpha = 0.14f),
-                    0.55f to colors.background,
-                    1f to colors.background
-                )
-            )
+            // Flat: the accent wash is gone with the rest of the app's gradients.
+            .background(if (embedded) Color.Transparent else colors.background)
     ) {
         val isWide = maxWidth >= 840.dp
 
@@ -106,7 +104,9 @@ fun LyricsScreen(
                     .padding(horizontal = 8.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.width(48.dp), contentAlignment = Alignment.CenterStart) {
-                    if (onClose != null) {
+                    if (embedded) {
+                        // Nothing to go back to from inside the player.
+                    } else if (onClose != null) {
                         MillenniumIconButton(
                             onClick = onClose,
                             style = MillenniumIconButtonStyle.Quiet

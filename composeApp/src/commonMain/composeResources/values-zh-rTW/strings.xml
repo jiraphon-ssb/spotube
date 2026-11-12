@@ -119,11 +119,6 @@
     <string name="settings_country_subtitle_current">用於內容與可用性的國家/地區。目前：%1$s</string>
     <string name="settings_option_name_and_code">%1$s（%2$s）</string>
 
-    <string name="settings_theme_title">主題</string>
-    <string name="settings_theme_subtitle_current">選擇 Spotube 如何配合系統外觀。目前：%1$s</string>
-    <string name="settings_theme_light">淺色</string>
-    <string name="settings_theme_dark">深色</string>
-    <string name="settings_theme_system">跟隨系統</string>
 
     <string name="settings_surface_theme_title">表面材質</string>
     <string name="settings_surface_theme_subtitle_current">應用程式的背景材質。目前：%1$s</string>

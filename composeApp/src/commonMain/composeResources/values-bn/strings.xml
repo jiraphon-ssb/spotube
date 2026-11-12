@@ -121,11 +121,6 @@
     <string name="settings_country_subtitle_current">কনটেন্ট ও প্রাপ্যতার জন্য দেশ। বর্তমান: %1$s</string>
     <string name="settings_option_name_and_code">%1$s (%2$s)</string>
 
-    <string name="settings_theme_title">থিম</string>
-    <string name="settings_theme_subtitle_current">Spotube আপনার সিস্টেমের অ্যাপিয়ারেন্সের সাথে কীভাবে মিলবে তা বেছে নিন। বর্তমান: %1$s</string>
-    <string name="settings_theme_light">লাইট</string>
-    <string name="settings_theme_dark">ডার্ক</string>
-    <string name="settings_theme_system">সিস্টেম</string>
 
     <string name="settings_surface_theme_title">সারফেস</string>
     <string name="settings_surface_theme_subtitle_current">অ্যাপের ব্যাকগ্রাউন্ড ম্যাটেরিয়াল। বর্তমান: %1$s</string>

@@ -124,11 +124,6 @@
     <string name="settings_country_subtitle_current">Regional country for content and availability. Current: %1$s</string>
     <string name="settings_option_name_and_code">%1$s (%2$s)</string>
 
-    <string name="settings_theme_title">Theme</string>
-    <string name="settings_theme_subtitle_current">Choose how Spotube matches your system appearance. Current: %1$s</string>
-    <string name="settings_theme_light">Light</string>
-    <string name="settings_theme_dark">Dark</string>
-    <string name="settings_theme_system">System</string>
 
     <string name="settings_surface_theme_title">Surface</string>
     <string name="settings_surface_theme_subtitle_current">Background material of the app. Current: %1$s</string>
@@ -165,12 +160,12 @@
     <string name="settings_palette_title">Palette</string>
     <string name="settings_palette_subtitle_current">Millennium accent palette. Current: %1$s</string>
     <string name="settings_palette_dialog_title">Palette</string>
-    <string name="settings_palette_dialog_description">Choose a Millennium accent palette and preview it in light and dark.</string>
+    <string name="settings_palette_dialog_description">Choose the accent colour used for buttons, the player and highlights.</string>
     <string name="settings_palette_label">Palette</string>
     <string name="settings_appearance_subtitle_palette">Millennium palette and accent. Current: %1$s</string>
-    <string name="settings_palette_blue">Blue</string>
-    <string name="settings_palette_orange">Orange</string>
-    <string name="settings_palette_lime">Lime</string>
+    <string name="settings_palette_blue">Sticker red</string>
+    <string name="settings_palette_orange">Kraft</string>
+    <string name="settings_palette_lime">Staff-pick yellow</string>
 
     <string name="settings_download_folder_title">Download folder override</string>
     <string name="settings_download_folder_current">Current folder: %1$s</string>
@@ -915,6 +910,7 @@
     <string name="player_collapse_content_description">Collapse player</string>
     <string name="player_expand_lyrics_content_description">Expand lyrics</string>
     <string name="player_now_playing">Now Playing</string>
+    <string name="player_toggle_now_playing_panel">Now playing panel</string>
     <string name="player_up_next">Up next</string>
     <string name="player_up_next_empty">Nothing queued after this song</string>
     <string name="player_view_queue">View queue</string>
@@ -1143,4 +1139,12 @@
     <string name="media_browser_featured">Featured</string>
     <string name="media_browser_saved_tracks">Saved Tracks</string>
     <string name="media_browser_top_tracks">Top Tracks</string>
+    <string name="home_shelf_previous">Scroll back</string>
+    <string name="home_shelf_next">Scroll forward</string>
+    <string name="search_recent_title">Recent searches</string>
+    <string name="search_remove_recent">Remove %1$s from recent searches</string>
+    <string name="search_idle_title">Find something to play</string>
+    <string name="search_idle_body">Search songs, artists, albums and playlists.</string>
+    <string name="featured_crate_position">Sleeve %1$d of %2$d in this crate</string>
+    <string name="featured_crate_hint">Move the mouse or use the arrow keys to flip</string>
 </resources>

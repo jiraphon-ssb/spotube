@@ -48,9 +48,10 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import org.spotube.spotube.core.ui.theming.AppTheme
-import org.spotube.spotube.core.ui.theming.isLightAppearance
+import org.spotube.spotube.core.ui.theming.rememberAppFontFamily
+import org.spotube.spotube.core.ui.theming.spotubeMillenniumConfig
+import org.spotube.spotube.core.ui.theming.spotubeTokens
 import org.spotube.spotube.modules.settings.SettingsViewModel
-import org.spotube.spotube.modules.settings.Theme
 import org.spotube.spotube.modules.settings.UserSettings
 import org.spotube.spotube.modules.settings.components.SelectionSettingCard
 import org.spotube.spotube.modules.settings.components.SettingCardItem
@@ -80,26 +81,6 @@ internal fun LazyListScope.appearanceSection(
     settingsSectionCard(
         items = listOf(
             {
-                SelectionSettingCard(
-                    title = stringResource(Res.string.settings_theme_title),
-                    subtitle = stringResource(
-                        Res.string.settings_theme_subtitle_current,
-                        settings.theme.displayLabel()
-                    ),
-                    icon = {
-                        SettingsItemIcon(Iconsax.IconsaxColorSwatch, stringResource(Res.string.settings_theme_title))
-                    },
-                    selectedOption = settings.theme,
-                    options = Theme.entries,
-                    optionLabel = { it.displayLabel() },
-                    onOptionSelected = { theme ->
-                        settingsViewModel.updateSettings {
-                            copy(theme = theme)
-                        }
-                    }
-                )
-            },
-            {
                 AppearanceSettingCard(
                     selectedPalette = settings.palette,
                     icon = {
@@ -115,15 +96,6 @@ internal fun LazyListScope.appearanceSection(
                     })
             })
     )
-}
-
-@Composable
-private fun Theme.displayLabel(): String {
-    return when (this) {
-        Theme.LIGHT -> stringResource(Res.string.settings_theme_light)
-        Theme.DARK -> stringResource(Res.string.settings_theme_dark)
-        Theme.SYSTEM -> stringResource(Res.string.settings_theme_system)
-    }
 }
 
 @Composable
@@ -206,13 +178,12 @@ private fun PaletteSwatch(
     label: String,
     selected: Boolean,
     onClick: () -> Unit) {
-    val dark = !isLightAppearance()
-    val scheme = remember(palette, dark) { MillenniumColorSchemes().resolve(palette, dark = dark) }
+    val accent = remember(palette) { spotubeTokens(palette).accentFill }
     Box(
         modifier = Modifier
             .size(40.dp)
             .clip(CircleShape)
-            .background(scheme.accent)
+            .background(accent)
             .border(
                 width = if (selected) 3.dp else 1.dp,
                 color = if (selected) AppTheme.colors.onSurface else AppTheme.colors.outlineVariant,
@@ -223,8 +194,7 @@ private fun PaletteSwatch(
 
 @Composable
 private fun PaletteTrailingSwatch(palette: MillenniumPalette) {
-    val dark = !isLightAppearance()
-    val scheme = remember(palette, dark) { MillenniumColorSchemes().resolve(palette, dark = dark) }
+    val accent = remember(palette) { spotubeTokens(palette).accentFill }
     Row(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically) {
@@ -232,19 +202,20 @@ private fun PaletteTrailingSwatch(palette: MillenniumPalette) {
             Modifier
                 .size(width = 46.dp, height = 28.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(scheme.accent.copy(alpha = 0.35f)))
+                .background(accent.copy(alpha = 0.35f)))
         Box(
             Modifier
                 .size(18.dp)
                 .clip(CircleShape)
-                .background(scheme.accent))
+                .background(accent))
     }
 }
 
 @Composable
 private fun PalettePreview(palette: MillenniumPalette) {
-    val dark = !isLightAppearance()
-    MillenniumTheme(dark = dark, config = MillenniumThemeConfig(palette = palette)) {
+    val fontFamily = rememberAppFontFamily()
+    val config = remember(palette, fontFamily) { spotubeMillenniumConfig(palette, fontFamily) }
+    MillenniumTheme(dark = true, config = config) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()

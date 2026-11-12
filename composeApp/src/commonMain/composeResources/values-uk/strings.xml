@@ -125,11 +125,6 @@
     <string name="settings_country_subtitle_current">Країна для контенту та доступності. Зараз: %1$s</string>
     <string name="settings_option_name_and_code">%1$s (%2$s)</string>
 
-    <string name="settings_theme_title">Тема</string>
-    <string name="settings_theme_subtitle_current">Як Spotube підлаштовується під тему системи. Зараз: %1$s</string>
-    <string name="settings_theme_light">Світла</string>
-    <string name="settings_theme_dark">Темна</string>
-    <string name="settings_theme_system">Системна</string>
 
     <string name="settings_surface_theme_title">Поверхня</string>
     <string name="settings_surface_theme_subtitle_current">Фоновий матеріал застосунку. Зараз: %1$s</string>

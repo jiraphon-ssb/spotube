@@ -21,6 +21,20 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import org.spotube.spotube.core.ui.component.DividerTabs
+import org.spotube.spotube.core.ui.theming.AppTheme
 import org.spotube.spotube.core.ui.misc.SkeletonTree
 import org.spotube.spotube.modules.shell.LocalAppShellBottomInset
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -37,6 +51,8 @@ internal fun <T> LibraryMediaCollection(
     loading: Boolean = false,
     loadingMore: Boolean = false,
     header: (@Composable (Boolean) -> Unit)? = null,
+    /** Name to file each item under in the A–Z divider index (grid view only). */
+    indexLabel: ((T) -> String)? = null,
     modifier: Modifier = Modifier
 ) {
     val gridState = rememberLazyGridState()
@@ -64,10 +80,28 @@ internal fun <T> LibraryMediaCollection(
             }
         }
     } else {
+        val headerOffset = if (header != null) 1 else 0
+        // Only worth an index once there's something to flip through, and only when the list is
+        // in name order; under any other sort the dividers would point at scattered items.
+        val nameOrdered = remember(items, indexLabel) {
+            indexLabel != null && items.map { indexOrder(indexLetter(indexLabel(it))) }
+                .zipWithNext().all { (a, b) -> compareValues(a.first, b.first).let { it < 0 || (it == 0 && a.second <= b.second) } }
+        }
+        val showIndex = indexLabel != null && !loading && items.size >= 12 && nameOrdered
+        Column(modifier.fillMaxSize()) {
+        if (showIndex) {
+            LibraryIndexDividers(
+                items = items,
+                label = indexLabel!!,
+                gridState = gridState,
+                headerOffset = headerOffset
+            )
+        }
+        // Cards carry their own inset (the hover plate), so the crate packs them tight.
         LazyVerticalGrid(
-            GridCells.Adaptive(160.dp), modifier.fillMaxSize(), state = gridState,
-            contentPadding = padding, horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            GridCells.Adaptive(160.dp), Modifier.fillMaxWidth().weight(1f), state = gridState,
+            contentPadding = padding, horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             if (loading) items(8) { SkeletonTree(true) { skeleton(false) } }
             else {
@@ -76,5 +110,65 @@ internal fun <T> LibraryMediaCollection(
                 if (loadingMore) items(4) { SkeletonTree(true) { skeleton(false) } }
             }
         }
+        }
+    }
+}
+
+/** Thai leading vowels: dictionaries file a word under the consonant that follows. */
+private val ThaiLeadingVowels = setOf('เ', 'แ', 'โ', 'ใ', 'ไ')
+
+/** The divider a name is filed under: "#" for digits/symbols, A–Z, or a Thai consonant. */
+internal fun indexLetter(name: String): String {
+    val c = name.trim().firstOrNull { it.isLetterOrDigit() && it !in ThaiLeadingVowels } ?: return "#"
+    return when {
+        c.isDigit() -> "#"
+        c in 'ก'..'ฮ' -> c.toString()
+        c.isLetter() -> c.uppercaseChar().toString()
+        else -> "#"
+    }
+}
+
+/** "#" first, then Latin, then Thai, each in its own alphabetical order. */
+private fun indexOrder(letter: String): Pair<Int, String> = when {
+    letter == "#" -> 0 to letter
+    letter.first() in 'ก'..'ฮ' -> 2 to letter
+    else -> 1 to letter
+}
+
+/**
+ * The library's divider cards: one kraft tab per starting letter present. Clicking a tab jumps
+ * to its first item; the tab of the first visible item stands up as you scroll.
+ */
+@Composable
+private fun <T> LibraryIndexDividers(
+    items: List<T>,
+    label: (T) -> String,
+    gridState: LazyGridState,
+    headerOffset: Int
+) {
+    val scope = rememberCoroutineScope()
+    val letters = remember(items) { items.map { indexLetter(label(it)) } }
+    val tabs = remember(letters) { letters.distinct().sortedWith(compareBy({ indexOrder(it).first }, { it })) }
+    val current by remember(letters, tabs) {
+        derivedStateOf {
+            letters.getOrNull(gridState.firstVisibleItemIndex - headerOffset)?.let(tabs::indexOf) ?: -1
+        }
+    }
+    Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp)) {
+        DividerTabs(
+            labels = tabs,
+            selectedIndex = current,
+            onSelect = { tab ->
+                val first = letters.indexOf(tabs[tab])
+                if (first >= 0) scope.launch { gridState.animateScrollToItem(first + headerOffset) }
+            },
+            modifier = Modifier.padding(start = 12.dp)
+        )
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(3.dp)
+                .background(AppTheme.colors.kraft, RoundedCornerShape(2.dp))
+        )
     }
 }

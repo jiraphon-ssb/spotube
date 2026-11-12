@@ -43,6 +43,7 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerIcon
@@ -52,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.composeunstyled.Text
 import org.spotube.plugin_interfaces.plugin_apis.lyrics.LyricsLine
 import org.spotube.spotube.core.ui.theming.AppTheme
@@ -142,17 +144,18 @@ private fun ImmersiveLyricLine(
     val colors = MillenniumTheme.colors
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
+    // Big, left-aligned lines: the sung line in full paper white, the rest fading with distance.
     val targetAlpha = when (distance) {
         0 -> 1f
-        1 -> 0.7f
-        2 -> 0.5f
-        else -> 0.32f
+        1 -> 0.42f
+        2 -> 0.32f
+        else -> 0.24f
     }
     val alpha by animateFloatAsState(targetAlpha, tween(300))
-    val scale by animateFloatAsState(if (isCurrent) 1f else 0.9f, tween(300))
-    val color by animateColorAsState(if (isCurrent) colors.accent else colors.text, tween(300))
+    val scale by animateFloatAsState(if (isCurrent) 1f else 0.97f, tween(300))
+    val color = colors.text
     val hoverBackground by animateColorAsState(
-        if (hovered && !isCurrent) colors.accent.copy(alpha = 0.10f) else Color.Transparent
+        if (hovered && !isCurrent) colors.text.copy(alpha = 0.06f) else Color.Transparent
     )
 
     Text(
@@ -160,9 +163,10 @@ private fun ImmersiveLyricLine(
         modifier = Modifier
             .fillMaxWidth()
             .graphicsLayer {
+                transformOrigin = TransformOrigin(0f, 0.5f)
                 scaleX = scale
                 scaleY = scale
-                this.alpha = if (hovered) maxOf(alpha, 0.85f) else alpha
+                this.alpha = if (hovered) maxOf(alpha, 0.75f) else alpha
             }
             .clip(RoundedCornerShape(14.dp))
             .background(hoverBackground)
@@ -170,11 +174,13 @@ private fun ImmersiveLyricLine(
             .pointerHoverIcon(PointerIcon.Hand)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 10.dp),
-        style = AppTheme.typography.headlineSmall.copy(
+        style = AppTheme.typography.displaySmall.copy(
+            fontSize = 34.sp,
+            lineHeight = 46.sp,
             fontWeight = FontWeight.Bold,
             color = color
         ),
-        textAlign = TextAlign.Center
+        textAlign = TextAlign.Start
     )
 }
 

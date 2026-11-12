@@ -121,11 +121,6 @@
     <string name="settings_country_subtitle_current">Land für Inhalte und Verfügbarkeit. Aktuell: %1$s</string>
     <string name="settings_option_name_and_code">%1$s (%2$s)</string>
 
-    <string name="settings_theme_title">Design</string>
-    <string name="settings_theme_subtitle_current">Lege fest, wie sich Spotube an das Erscheinungsbild deines Systems anpasst. Aktuell: %1$s</string>
-    <string name="settings_theme_light">Hell</string>
-    <string name="settings_theme_dark">Dunkel</string>
-    <string name="settings_theme_system">System</string>
 
     <string name="settings_surface_theme_title">Oberfläche</string>
     <string name="settings_surface_theme_subtitle_current">Hintergrundmaterial der App. Aktuell: %1$s</string>

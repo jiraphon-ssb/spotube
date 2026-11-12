@@ -124,6 +124,16 @@ import org.spotube.spotube.resources.iconsax.IconsaxSearchBroken
 import org.spotube.spotube.resources.iconsax.IconsaxTrash
 import org.spotube.spotube.resources.iconsax.InconsaxClock
 import spotube.composeapp.generated.resources.Res
+import spotube.composeapp.generated.resources.search_idle_body
+import spotube.composeapp.generated.resources.search_idle_title
+import spotube.composeapp.generated.resources.search_recent_title
+import spotube.composeapp.generated.resources.search_remove_recent
+import org.spotube.millennium.composables.MillenniumIconButton
+import org.spotube.millennium.composables.MillenniumIconButtonStyle
+import org.spotube.spotube.resources.glyphs.Glyphs
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.text.style.TextOverflow
 import spotube.composeapp.generated.resources.library_tab_albums
 import spotube.composeapp.generated.resources.library_tab_artists
 import spotube.composeapp.generated.resources.library_tab_playlists
@@ -392,6 +402,13 @@ fun SearchScreen(viewModel: SearchScreenViewModel = koinViewModel()) {
                 selectedType == MetadataSupportedSearchType.ALL -> {
                     SearchAllTab(
                         query = state.query,
+                        recentSearches = state.recentSearches,
+                        onRecentSearchClick = { search ->
+                            viewModel.applyRecentSearch(search)
+                            focusManager.clearFocus()
+                        },
+                        onRemoveRecentSearch = viewModel::removeRecentSearch,
+                        onClearRecentSearches = viewModel::clearAllRecentSearches,
                         tracks = state.tracks,
                         albums = state.albums,
                         artists = state.artists,
@@ -616,6 +633,10 @@ private fun SearchTabs(
 @Composable
 private fun SearchAllTab(
     query: String,
+    recentSearches: List<String>,
+    onRecentSearchClick: (String) -> Unit,
+    onRemoveRecentSearch: (String) -> Unit,
+    onClearRecentSearches: () -> Unit,
     tracks: SearchPagedState<MetadataTrack>,
     albums: SearchPagedState<MetadataAlbum.Basic>,
     artists: SearchPagedState<MetadataArtist.Basic>,
@@ -639,7 +660,13 @@ private fun SearchAllTab(
     modifier: Modifier = Modifier
 ) {
     if (query.isBlank()) {
-        SearchMessage(message = stringResource(Res.string.search_start_typing), modifier = modifier)
+        SearchIdle(
+            recentSearches = recentSearches,
+            onRecentSearchClick = onRecentSearchClick,
+            onRemoveRecentSearch = onRemoveRecentSearch,
+            onClearRecentSearches = onClearRecentSearches,
+            modifier = modifier
+        )
         return
     }
 
@@ -1164,6 +1191,115 @@ private fun SearchLoadingIndicator(
                 color = AppTheme.colors.onSurfaceVariant,
                 style = AppTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+/**
+ * What Search shows before a query: the recent searches to pick up again, or an invitation to
+ * search when there is no history yet.
+ */
+@Composable
+private fun SearchIdle(
+    recentSearches: List<String>,
+    onRecentSearchClick: (String) -> Unit,
+    onRemoveRecentSearch: (String) -> Unit,
+    onClearRecentSearches: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = AppTheme.colors
+    if (recentSearches.isEmpty()) {
+        Column(
+            modifier = modifier.padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically)
+        ) {
+            MillenniumIcon(
+                imageVector = Glyphs.Search,
+                contentDescription = null,
+                tint = colors.onSurfaceVariant,
+                size = 40.dp
+            )
+            Text(
+                text = stringResource(Res.string.search_idle_title),
+                style = AppTheme.typography.titleLarge,
+                color = colors.onSurface,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+            Text(
+                text = stringResource(Res.string.search_idle_body),
+                style = AppTheme.typography.bodyMedium,
+                color = colors.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+        }
+        return
+    }
+
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(
+            start = 16.dp, end = 16.dp, top = 16.dp,
+            bottom = 16.dp + LocalAppShellBottomInset.current
+        )
+    ) {
+        item {
+            Row(
+                modifier = Modifier.widthIn(max = 720.dp).fillMaxWidth().padding(start = 12.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(Res.string.search_recent_title),
+                    style = AppTheme.typography.headlineSmall,
+                    color = colors.onSurface,
+                    modifier = Modifier.weight(1f)
+                )
+                MillenniumButton(
+                    onClick = onClearRecentSearches,
+                    style = MillenniumButtonStyle.Quiet
+                ) {
+                    Text(stringResource(Res.string.search_clear_history))
+                }
+            }
+        }
+        items(recentSearches.take(12), key = { it }) { search ->
+            MillenniumListTile(
+                modifier = Modifier.widthIn(max = 720.dp),
+                onClick = { onRecentSearchClick(search) },
+                minimumHeight = 44.dp,
+                leading = {
+                    MillenniumIcon(
+                        imageVector = Glyphs.Clock,
+                        contentDescription = null,
+                        tint = colors.onSurfaceVariant,
+                        size = 18.dp
+                    )
+                },
+                title = {
+                    Text(
+                        text = search,
+                        style = AppTheme.typography.bodyLarge,
+                        color = colors.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
+                trailing = {
+                    MillenniumIconButton(
+                        onClick = { onRemoveRecentSearch(search) },
+                        style = MillenniumIconButtonStyle.Quiet,
+                        contentDescription = stringResource(Res.string.search_remove_recent, search)
+                    ) {
+                        MillenniumIcon(
+                            imageVector = Glyphs.Close,
+                            contentDescription = null,
+                            tint = colors.onSurfaceVariant,
+                            size = 16.dp
+                        )
+                    }
+                }
             )
         }
     }

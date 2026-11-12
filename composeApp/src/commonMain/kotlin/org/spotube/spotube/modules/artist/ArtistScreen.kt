@@ -24,7 +24,6 @@ import org.spotube.millennium.composables.MillenniumButton
 import org.spotube.millennium.composables.MillenniumButtonStyle
 import org.spotube.millennium.composables.MillenniumIconButton
 import org.spotube.millennium.composables.MillenniumIconButtonStyle
-import org.spotube.millennium.composables.MillenniumCard
 import org.spotube.millennium.composables.MillenniumTooltip
 import org.spotube.millennium.theme.MillenniumTheme
 import androidx.compose.foundation.background
@@ -41,6 +40,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.BiasAlignment
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.sp
+import org.spotube.spotube.core.ui.component.BigPlayButton
+import org.spotube.spotube.core.ui.component.CrateFrame
+import org.spotube.spotube.core.ui.component.CrateRow
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import org.spotube.spotube.core.ui.theming.rememberArtworkTint
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -150,23 +163,20 @@ fun ArtistScreen(
                         verticalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
                         item {
-                            ArtistHeaderCard(
+                            ArtistBanner(
                                 artist = currentState.artist,
                                 isSaved = savedArtistIds.contains(currentState.artist.id),
                                 isSaving = currentState.isSaving,
                                 onFollowClick = viewModel::toggleSavedArtist,
                                 isBlacklisted = currentState.artist.id in blacklistedArtistIds,
-                                onBlacklistClick = { viewModel.toggleArtistBlacklist(currentState.artist) })
+                                onBlacklistClick = { viewModel.toggleArtistBlacklist(currentState.artist) },
+                                onPlay = viewModel::playTopTracks,
+                                isPlayLoading = playbackUiState.isPlayLoading,
+                                onAddToQueue = viewModel::addTopTracksToQueue,
+                                isAddToQueueLoading = playbackUiState.isAddToQueueLoading)
                         }
 
-                        item {
-                            TopTracksHeader(
-                                onPlay = viewModel::playTopTracks,
-                                onAddToQueue = viewModel::addTopTracksToQueue,
-                                isPlayLoading = playbackUiState.isPlayLoading,
-                                isAddToQueueLoading = playbackUiState.isAddToQueueLoading
-                            )
-                        }
+                        item { TopTracksHeader() }
 
                         item {
                             TrackList(
@@ -338,247 +348,108 @@ private fun ArtistErrorContent(
     }
 }
 
+/**
+ * Full-bleed artist banner: the artist's photo fills the width and fades into the canvas, with the
+ * name set large on top of it as the page's hero. Play (top tracks) and Follow sit right under it.
+ */
 @Composable
-private fun ArtistHeaderCard(
+private fun ArtistBanner(
     artist: MetadataArtist.Detailed,
     isSaved: Boolean,
     isSaving: Boolean,
     onFollowClick: () -> Unit,
     isBlacklisted: Boolean,
-    onBlacklistClick: () -> Unit
+    onBlacklistClick: () -> Unit,
+    onPlay: () -> Unit,
+    isPlayLoading: Boolean,
+    onAddToQueue: () -> Unit,
+    isAddToQueueLoading: Boolean
 ) {
-    Box(modifier = Modifier.fillMaxWidth()) {
-        val isCompact = currentWindowWidthBreakpoint() isBelow WindowBreakpoints.Medium
+    val colors = AppTheme.colors
+    val isCompact = currentWindowWidthBreakpoint() isBelow WindowBreakpoints.Medium
+    val imageUrl = artist.thumbnails.firstOrNull()?.url.orEmpty()
+    val tint by rememberArtworkTint(imageUrl.ifBlank { null }, fallback = colors.surfaceContainerHigh)
+    val sidePadding = if (isCompact) 16.dp else 28.dp
 
-        MillenniumCard(
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .height(if (isCompact) 280.dp else 340.dp)
+                // Read in the draw phase so the tint animation doesn't recompose the banner.
+                .drawBehind { drawRect(tint) }
         ) {
-            if (isCompact) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    ArtistAvatar(
-                        artist = artist,
-                        size = 180.dp
-                    )
-
-                    ArtistMeta(
-                        artist = artist,
-                        isCompact = true
-                    )
-
-                    ArtistHeaderActions(
-                        isSaved = isSaved,
-                        isSaving = isSaving,
-                        onFollowClick = onFollowClick,
-                        isBlacklisted = isBlacklisted,
-                        onBlacklistClick = onBlacklistClick
-                    )
-                }
-            } else {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                    horizontalArrangement = Arrangement.spacedBy(28.dp),
-                    // Name/actions sit on the avatar's baseline, like the playlist header.
-                    verticalAlignment = Alignment.Bottom
-                ) {
-                    ArtistAvatar(
-                        artist = artist,
-                        size = 220.dp
-                    )
-
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        ArtistMeta(
-                            artist = artist,
-                            isCompact = false
+            if (imageUrl.isNotBlank()) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    // Faces sit in the upper part of most artist photos.
+                    alignment = BiasAlignment(0f, -0.45f)
+                )
+            }
+            // Fade into the canvas so the name reads on any photo and the page continues seamlessly.
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            0f to colors.background.copy(alpha = 0.1f),
+                            0.45f to colors.background.copy(alpha = 0.35f),
+                            1f to colors.background
                         )
-
-                        ArtistHeaderActions(
-                            isSaved = isSaved,
-                            isSaving = isSaving,
-                            onFollowClick = onFollowClick,
-                            isBlacklisted = isBlacklisted,
-                            onBlacklistClick = onBlacklistClick
-                        )
-                    }
-                }
+                    )
+            )
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = sidePadding, end = sidePadding, bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = artist.name,
+                    style = artistNameStyle(artist.name, isCompact),
+                    color = colors.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = buildString {
+                        append(formatFollowers(artist.followersCount))
+                        if (artist.genres.isNotEmpty()) {
+                            append(", ")
+                            append(artist.genres.take(3).joinToString(", "))
+                        }
+                    },
+                    style = AppTheme.typography.bodyMedium,
+                    color = colors.onSurface.copy(alpha = 0.78f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
-    }
-}
 
-@Composable
-private fun ArtistAvatar(
-    artist: MetadataArtist.Detailed,
-    size: androidx.compose.ui.unit.Dp
-) {
-    Box(
-        modifier = Modifier
-            .size(size)
-            .clip(CircleShape)
-            .background(AppTheme.colors.surfaceContainerHighest),
-        contentAlignment = Alignment.Center
-    ) {
-        val imageUrl = artist.thumbnails.firstOrNull()?.url.orEmpty()
-        if (imageUrl.isNotBlank()) {
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = artist.name,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-        } else {
-            MillenniumIcon(
-                imageVector = Iconsax.User,
-                contentDescription = artist.name,
-                tint = AppTheme.colors.onSurfaceVariant,
-                modifier = Modifier.size(size * 0.4f)
-            )
-        }
-    }
-}
-
-@Composable
-private fun ArtistMeta(
-    artist: MetadataArtist.Detailed,
-    isCompact: Boolean
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = if (isCompact) Alignment.CenterHorizontally else Alignment.Start,
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Text(
-            text = artist.name,
-            style = if (isCompact) AppTheme.typography.headlineSmall else AppTheme.typography.displaySmall,
-            fontWeight = FontWeight.Bold,
-            textAlign = if (isCompact) TextAlign.Center else TextAlign.Start,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-
-        Text(
-            text = buildString {
-                append(formatFollowers(artist.followersCount))
-                if (artist.genres.isNotEmpty()) {
-                    append(" • ")
-                    append(artist.genres.joinToString(", "))
-                }
-            },
-            style = AppTheme.typography.bodyMedium,
-            color = AppTheme.colors.onSurfaceVariant,
-            textAlign = if (isCompact) TextAlign.Center else TextAlign.Start
-        )
-
-        artist.biography?.takeIf { it.isNotBlank() }?.let {
-            Text(
-                text = it,
-                style = AppTheme.typography.bodyMedium,
-                color = AppTheme.colors.onSurfaceVariant,
-                maxLines = if (isCompact) 4 else 3,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = if (isCompact) TextAlign.Center else TextAlign.Start
-            )
-        }
-    }
-}
-
-@Composable
-private fun ArtistHeaderActions(
-    isSaved: Boolean,
-    isSaving: Boolean,
-    onFollowClick: () -> Unit,
-    isBlacklisted: Boolean,
-    onBlacklistClick: () -> Unit
-) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (isSaved) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = sidePadding, end = sidePadding, top = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            BigPlayButton(isPlaying = false, loading = isPlayLoading, onClick = onPlay)
             MillenniumButton(
                 onClick = onFollowClick,
                 loading = isSaving,
                 style = MillenniumButtonStyle.Secondary
             ) {
                 Text(
-                    stringResource(Res.string.artist_following),
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    text = stringResource(
+                        if (isSaved) Res.string.artist_following else Res.string.collection_details_follow
+                    ),
+                    maxLines = 1
                 )
             }
-        } else {
-            MillenniumButton(onClick = onFollowClick, loading = isSaving) {
-                Text(stringResource(Res.string.collection_details_follow), modifier = Modifier.width(65.dp), textAlign = TextAlign.Center)
-            }
-        }
-
-        MillenniumTooltip(
-            text = if (isBlacklisted) stringResource(Res.string.blacklist_remove) else stringResource(Res.string.blacklist_add)
-        ) {
-            if (isBlacklisted) {
-                MillenniumIconButton(
-                    onClick = onBlacklistClick,
-                    style = MillenniumIconButtonStyle.Quiet
-                ) {
-                    MillenniumIcon(
-                        imageVector = Glyphs.UserBlock,
-                        contentDescription = stringResource(Res.string.blacklist_remove),
-                        tint = AppTheme.colors.error
-                    )
-                }
-            } else {
-                MillenniumIconButton(
-                    onClick = onBlacklistClick,
-                    style = MillenniumIconButtonStyle.Quiet
-                ) {
-                    MillenniumIcon(
-                        imageVector = Glyphs.UserBlock,
-                        contentDescription = stringResource(Res.string.blacklist_add),
-                        tint = AppTheme.colors.onSurfaceVariant
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TopTracksHeader(
-    onPlay: () -> Unit,
-    onAddToQueue: () -> Unit,
-    isPlayLoading: Boolean = false,
-    isAddToQueueLoading: Boolean = false
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = stringResource(Res.string.artist_top_tracks),
-            style = AppTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold
-        )
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
             MillenniumIconButton(
                 onClick = onAddToQueue,
                 loading = isAddToQueueLoading,
@@ -587,24 +458,64 @@ private fun TopTracksHeader(
                 MillenniumIcon(
                     imageVector = Glyphs.AddTo,
                     contentDescription = stringResource(Res.string.artist_add_top_tracks_to_queue),
-                    tint = AppTheme.colors.onSurfaceVariant
+                    tint = colors.onSurfaceVariant,
+                    size = 24.dp
                 )
             }
-            MillenniumButton(
-                onClick = onPlay,
-                loading = isPlayLoading,
-                style = MillenniumButtonStyle.Primary
+            MillenniumTooltip(
+                text = stringResource(if (isBlacklisted) Res.string.blacklist_remove else Res.string.blacklist_add)
             ) {
-                MillenniumIcon(
-                    imageVector = Glyphs.Play,
-                    contentDescription = null,
-                    tint = AppTheme.colors.onAccentFill,
-                    size = 18.dp
-                )
-                Text(stringResource(Res.string.artist_play_top_tracks))
+                MillenniumIconButton(
+                    onClick = onBlacklistClick,
+                    style = MillenniumIconButtonStyle.Quiet
+                ) {
+                    MillenniumIcon(
+                        imageVector = Glyphs.UserBlock,
+                        contentDescription = stringResource(
+                            if (isBlacklisted) Res.string.blacklist_remove else Res.string.blacklist_add
+                        ),
+                        tint = if (isBlacklisted) colors.error else colors.onSurfaceVariant,
+                        size = 24.dp
+                    )
+                }
             }
         }
+
+        artist.biography?.takeIf { it.isNotBlank() }?.let {
+            Text(
+                text = it,
+                style = AppTheme.typography.bodyMedium,
+                color = colors.onSurfaceVariant,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .padding(start = sidePadding, end = sidePadding, top = 16.dp)
+                    .widthIn(max = 720.dp)
+            )
+        }
     }
+}
+
+/** Short names get the poster size; long ones step down so they still fit on two lines. */
+@Composable
+private fun artistNameStyle(name: String, isCompact: Boolean): TextStyle {
+    val type = AppTheme.typography
+    return when {
+        isCompact -> type.displaySmall
+        name.length <= 14 -> type.displayLarge.copy(fontSize = 88.sp, lineHeight = 92.sp, letterSpacing = (-2.4).sp)
+        name.length <= 28 -> type.displayLarge
+        else -> type.displaySmall
+    }
+}
+
+@Composable
+private fun TopTracksHeader() {
+    Text(
+        text = stringResource(Res.string.artist_top_tracks),
+        style = AppTheme.typography.titleLarge,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier.padding(horizontal = 28.dp)
+    )
 }
 
 @Composable
@@ -613,34 +524,44 @@ private fun AlbumsSection(
     onAlbumClick: (MetadataAlbum.Detailed) -> Unit,
     onLoadMore: () -> Unit
 ) {
-    val rowState = rememberLazyListState()
-
-    LaunchedEffect(rowState) {
-        snapshotFlow { rowState.layoutInfo }
-            .map { layoutInfo ->
-                val lastVisibleIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index
-                val totalItems = layoutInfo.totalItemsCount
-                Pair(lastVisibleIndex, totalItems)
-            }
-            .distinctUntilChanged()
-            .collect { (lastVisibleIndex, totalItems) ->
-                if (lastVisibleIndex != null && totalItems > 0 && lastVisibleIndex >= totalItems - 2) {
-                    onLoadMore()
-                }
-            }
-    }
+    // The discography is its own crate; ids can repeat across pages, keys must not.
+    val unique = remember(albums) { albums.distinctBy { it.id } }
+    var facing by remember { mutableIntStateOf(0) }
+    if (unique.isEmpty()) return
+    val facingAlbum = unique[facing.coerceIn(0, unique.lastIndex)]
 
     SectionHeader(title = stringResource(Res.string.library_tab_albums))
     Spacer(modifier = Modifier.size(8.dp))
-    LazyRow(
-        state = rowState,
-        modifier = Modifier.dragScrollable(rowState),
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.Top
+    CrateFrame(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 24.dp)
     ) {
-        itemsWithUniqueKeys(albums, id = { it.id }) { album ->
-            AlbumCard(album = album)
+        CrateRow(
+            items = unique,
+            key = { it.id },
+            cover = { it.thumbnails.firstOrNull()?.url },
+            label = { it.title },
+            facingIndex = facing.coerceIn(0, unique.lastIndex),
+            onFacingChange = { facing = it },
+            onOpen = onAlbumClick,
+            faceSize = 190.dp,
+            onNearEnd = onLoadMore,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Text(
+            text = facingAlbum.title,
+            style = AppTheme.typography.titleMedium,
+            color = AppTheme.colors.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 4.dp)
+        )
+        facingAlbum.releaseDate?.take(4)?.let { year ->
+            Text(
+                text = year,
+                style = AppTheme.typography.bodySmall,
+                color = AppTheme.colors.onSurfaceVariant
+            )
         }
     }
 }

@@ -17,6 +17,17 @@
 
 package org.spotube.spotube.modules.shell
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
+import kotlinx.coroutines.delay
+import org.spotube.spotube.core.audioplayer.PlayerState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.hoverable
@@ -37,6 +48,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -50,6 +62,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -97,6 +112,8 @@ import org.spotube.spotube.resources.iconsax.IconsaxInformation
 import org.spotube.spotube.resources.iconsax.IconsaxMoon
 import org.spotube.spotube.resources.iconsax.IconsaxMusic
 import spotube.composeapp.generated.resources.Res
+import spotube.composeapp.generated.resources.player_alternative_source
+import spotube.composeapp.generated.resources.common_close
 import spotube.composeapp.generated.resources.player_alternative_source_content_description
 import spotube.composeapp.generated.resources.player_disable_shuffle_content_description
 import spotube.composeapp.generated.resources.player_download
@@ -130,6 +147,9 @@ import kotlin.time.Duration.Companion.milliseconds
 /** Width of the docked player panel. The shell only docks it when the window can afford it. */
 val AppSidePlayerWidth = 320.dp
 
+/** Stop showing "loading" if playback never starts (resolution failed, nothing to play). */
+private const val PENDING_PLAY_TIMEOUT_MS = 20_000L
+
 // ---------------------------------------------------------------------------------------------
 // Shared player state + actions (side panel and full-window view)
 // ---------------------------------------------------------------------------------------------
@@ -142,6 +162,8 @@ val AppSidePlayerWidth = 320.dp
 internal class PlayerController(
     val ui: PlayerUiState,
     val isJamGuest: Boolean,
+    /** Play was pressed (or the player is buffering) and audio hasn't started yet. */
+    val isLoading: Boolean,
     val seekProgress: Float,
     val currentTrack: MetadataTrack?,
     val onSeekChange: (Float) -> Unit,
@@ -174,6 +196,18 @@ internal fun rememberPlayerController(
     var lastNonZeroVolume by remember {
         mutableFloatStateOf(if (ui.volume > 0f) ui.volume else 0.6f)
     }
+    // Resolving a streamed track takes seconds; show it from the moment play is pressed rather
+    // than leaving a still play icon that reads as "didn't register".
+    var pendingPlay by remember { mutableStateOf(false) }
+    LaunchedEffect(ui.playerState) {
+        if (ui.playerState == PlayerState.PLAYING) pendingPlay = false
+    }
+    LaunchedEffect(pendingPlay) {
+        if (pendingPlay) {
+            delay(PENDING_PLAY_TIMEOUT_MS)
+            pendingPlay = false
+        }
+    }
 
     LaunchedEffect(ui.progress, isSeeking) {
         if (!isSeeking) seekProgress = ui.progress
@@ -185,6 +219,7 @@ internal fun rememberPlayerController(
     return PlayerController(
         ui = ui,
         isJamGuest = isJamGuest,
+        isLoading = pendingPlay || ui.playerState == PlayerState.BUFFERING,
         seekProgress = seekProgress,
         currentTrack = (ui.currentQueueEntry as? QueueEntry.StreamingTrack)?.track,
         onSeekChange = {
@@ -203,7 +238,14 @@ internal fun rememberPlayerController(
             }
         },
         onPlayPause = {
-            scope.launch { if (ui.isPlaying) audioPlayer.pause() else audioPlayer.play() }
+            // A second press while still loading cancels the start instead of re-requesting it.
+            if (ui.isPlaying || pendingPlay) {
+                pendingPlay = false
+                scope.launch { audioPlayer.pause() }
+            } else {
+                pendingPlay = true
+                scope.launch { audioPlayer.play() }
+            }
         },
         onPrevious = { if (!isJamGuest) scope.launch { audioPlayer.skipToPrevious() } },
         onNext = { if (!isJamGuest) scope.launch { audioPlayer.skipToNext() } },
@@ -232,23 +274,17 @@ internal fun rememberPlayerController(
 // ---------------------------------------------------------------------------------------------
 
 /**
- * The desktop "now playing" panel docked to the right of the content.
- *
- * Top to bottom: header (expand to full window, queue), large artwork (opens the album), title /
- * artists / like, seek bar, the accent control deck, secondary actions (lyrics, download,
- * alternative source, more), the next three queue entries (click to jump), and a volume row
- * pinned to the bottom.
+ * Optional now-playing *info* panel docked to the right on wide windows (Spotify's "Now playing
+ * view"). Transport lives in the bottom bar; this panel shows the artwork, title/artists/like and
+ * what's up next, and can be closed.
  */
 @Composable
 fun AppSidePlayer(
     modifier: Modifier = Modifier,
     onQueue: () -> Unit = {},
-    onAlternativeSource: () -> Unit = {},
-    onLyrics: () -> Unit = {},
     onExpand: () -> Unit = {},
+    onClose: () -> Unit = {},
     audioPlayerQueue: AudioPlayerQueue = koinInject(),
-    downloadsViewModel: DownloadsViewModel = koinViewModel(),
-    playerOptionsViewModel: PlayerOptionsViewModel = koinViewModel(),
     savedTracksViewModel: SavedTracksViewModel = koinViewModel<SavedTracksViewModel>(
         key = SAVED_TRACKS_COLLECTION_ID,
         parameters = { parametersOf() }
@@ -258,18 +294,16 @@ fun AppSidePlayer(
     val navigationCommands: NavigationCommands = koinInject()
     val colors = AppTheme.colors
 
-    PlayerOptionDialogs(viewModel = playerOptionsViewModel)
-
     Column(
         modifier = modifier
             .width(AppSidePlayerWidth)
             .fillMaxHeight()
-            .background(colors.surface)
+            .background(colors.background)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 20.dp, end = 10.dp, top = 12.dp, bottom = 4.dp),
+                .padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -282,12 +316,16 @@ fun AppSidePlayer(
                 icon = Glyphs.Expand,
                 contentDescription = stringResource(Res.string.player_expand_content_description),
                 enabled = player.ui.currentQueueEntry != null,
-                onClick = onExpand
+                onClick = onExpand,
+                size = 32.dp,
+                iconSize = 18.dp
             )
             QuietGlyphButton(
-                icon = Glyphs.Queue,
-                contentDescription = stringResource(Res.string.queue_title),
-                onClick = onQueue
+                icon = Glyphs.Close,
+                contentDescription = stringResource(Res.string.common_close),
+                onClick = onClose,
+                size = 32.dp,
+                iconSize = 18.dp
             )
         }
 
@@ -299,7 +337,7 @@ fun AppSidePlayer(
                     .weight(1f)
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp)
+                    .padding(horizontal = 16.dp)
                     .padding(top = 8.dp, bottom = 16.dp)
             ) {
                 PlayerArtwork(
@@ -307,7 +345,7 @@ fun AppSidePlayer(
                     onOpenAlbum = { id -> navigationCommands.navigateTo(Routes.Album(id)) },
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(16.dp))
                 PlayerTitleBlock(
                     player = player,
                     titleStyle = AppTheme.typography.titleLarge,
@@ -315,37 +353,23 @@ fun AppSidePlayer(
                     savedTracksViewModel = savedTracksViewModel,
                     onArtistClick = { id -> navigationCommands.navigateTo(Routes.Artist(id)) }
                 )
-                Spacer(Modifier.height(12.dp))
-                PlayerSeekBar(player = player)
-                Spacer(Modifier.height(14.dp))
-                ControlDeck(player = player)
-                Spacer(Modifier.height(8.dp))
-                PlayerSecondaryActions(
-                    player = player,
-                    downloadsViewModel = downloadsViewModel,
-                    playerOptionsViewModel = playerOptionsViewModel,
-                    onLyrics = onLyrics,
-                    onAlternativeSource = onAlternativeSource,
-                    onGoToAlbum = { id -> navigationCommands.navigateTo(Routes.Album(id)) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(Modifier.height(16.dp))
-                UpNextSection(
-                    items = player.ui.upNext(limit = 3),
-                    enabled = !player.isJamGuest,
-                    onJumpTo = player.onJumpTo,
-                    onViewQueue = onQueue
-                )
+                Spacer(Modifier.height(20.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(AppTheme.shapes.medium)
+                        .background(colors.surface)
+                        .padding(12.dp)
+                ) {
+                    UpNextSection(
+                        items = player.ui.upNext(limit = 4),
+                        enabled = !player.isJamGuest,
+                        onJumpTo = player.onJumpTo,
+                        onViewQueue = onQueue
+                    )
+                }
             }
         }
-
-        MillenniumSeparator(modifier = Modifier.fillMaxWidth())
-        PlayerVolumeRow(
-            player = player,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 12.dp, end = 20.dp, top = 6.dp, bottom = 8.dp)
-        )
     }
 }
 
@@ -361,6 +385,7 @@ internal fun QuietGlyphButton(
     onClick: () -> Unit,
     enabled: Boolean = true,
     active: Boolean = false,
+    tint: Color? = null,
     size: Dp = 36.dp,
     iconSize: Dp = 20.dp
 ) {
@@ -375,7 +400,11 @@ internal fun QuietGlyphButton(
         MillenniumIcon(
             icon,
             contentDescription = contentDescription,
-            tint = if (active) colors.primary else colors.onSurfaceVariant,
+            tint = when {
+                active -> colors.primary
+                tint != null -> tint
+                else -> colors.onSurfaceVariant
+            },
             size = iconSize
         )
     }
@@ -475,68 +504,55 @@ internal fun PlayerSeekBar(player: PlayerController, modifier: Modifier = Modifi
 }
 
 /**
- * The one loud element of the player: an accent slab holding the transport, with a white
- * play/pause key so the primary action reads first. Glyphs are solid/outline single-layer so the
- * tint stays crisp on the accent fill.
+ * Transport: shuffle, previous, play key, next, repeat. No slab: the controls are plain glyphs and
+ * the play key is the only filled element (white in the bar, the yellow accent gradient in the
+ * full-window player). Toggles show state with the accent colour *and* a dot-free full-strength
+ * glyph vs. muted, so it isn't colour alone.
  */
 @Composable
-internal fun ControlDeck(player: PlayerController, height: Dp = 72.dp, modifier: Modifier = Modifier) {
+internal fun TransportRow(player: PlayerController, large: Boolean, modifier: Modifier = Modifier) {
     val colors = AppTheme.colors
     val ui = player.ui
-    val controlsEnabled = !player.isJamGuest
-
+    val enabled = !player.isJamGuest
+    val button = if (large) 48.dp else 32.dp
+    val glyph = if (large) 24.dp else 18.dp
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(height)
-            .clip(AppTheme.shapes.large)
-            .background(colors.accentFill)
-            .padding(horizontal = 10.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = modifier,
+        horizontalArrangement = if (large) Arrangement.SpaceBetween else Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        DeckButton(
+        QuietGlyphButton(
             icon = Glyphs.Shuffle,
             contentDescription = stringResource(
                 if (ui.isShuffling) Res.string.player_disable_shuffle_content_description
                 else Res.string.player_enable_shuffle_content_description
             ),
-            toggle = true,
+            onClick = player.onShuffle,
+            enabled = enabled,
             active = ui.isShuffling,
-            enabled = controlsEnabled,
-            onClick = player.onShuffle
+            size = button,
+            iconSize = glyph
         )
-        DeckButton(
+        QuietGlyphButton(
             icon = Glyphs.SkipPrevious,
             contentDescription = stringResource(Res.string.player_previous_content_description),
-            enabled = controlsEnabled,
-            onClick = player.onPrevious
+            onClick = player.onPrevious,
+            enabled = enabled,
+            tint = colors.onSurface,
+            size = button,
+            iconSize = glyph
         )
-        MillenniumIconButton(
-            onClick = player.onPlayPause,
-            style = MillenniumIconButtonStyle.Quiet,
-            background = SolidColor(colors.onAccentFill),
-            foreground = colors.accentFill,
-            shape = RoundedCornerShape(16.dp),
-            size = DpSize(52.dp, 52.dp)
-        ) {
-            MillenniumIcon(
-                if (ui.isPlaying) Glyphs.Pause else Glyphs.Play,
-                contentDescription = stringResource(
-                    if (ui.isPlaying) Res.string.player_pause_content_description
-                    else Res.string.player_play_or_pause_content_description
-                ),
-                tint = colors.accentFill,
-                size = 24.dp
-            )
-        }
-        DeckButton(
+        PlayKey(player = player, large = large)
+        QuietGlyphButton(
             icon = Glyphs.SkipNext,
             contentDescription = stringResource(Res.string.player_next_content_description),
-            enabled = controlsEnabled,
-            onClick = player.onNext
+            onClick = player.onNext,
+            enabled = enabled,
+            tint = colors.onSurface,
+            size = button,
+            iconSize = glyph
         )
-        DeckButton(
+        QuietGlyphButton(
             icon = if (ui.loopState == LoopState.ONE) Glyphs.RepeatOne else Glyphs.Repeat,
             contentDescription = stringResource(
                 when (ui.loopState) {
@@ -545,44 +561,117 @@ internal fun ControlDeck(player: PlayerController, height: Dp = 72.dp, modifier:
                     LoopState.ALL -> Res.string.player_loop_mode_all
                 }
             ),
-            toggle = true,
+            onClick = player.onLoop,
+            enabled = enabled,
             active = ui.loopState != LoopState.NONE,
-            enabled = controlsEnabled,
-            onClick = player.onLoop
+            size = button,
+            iconSize = glyph
         )
     }
 }
 
+/** The play/pause key: 36dp white circle in the bar, 64dp accent-gradient circle full-window. */
+@Composable
+internal fun PlayKey(player: PlayerController, large: Boolean) {
+    val colors = AppTheme.colors
+    val ui = player.ui
+    val keySize = if (large) 64.dp else 36.dp
+    val ink = colors.onAccentFill
+    MillenniumIconButton(
+        onClick = player.onPlayPause,
+        style = MillenniumIconButtonStyle.Quiet,
+        // The ring has no label of its own; while loading, the key acts as "pause".
+        contentDescription = if (player.isLoading) {
+            stringResource(Res.string.player_pause_content_description)
+        } else {
+            null
+        },
+        background = colors.accentBrush,
+        foreground = ink,
+        shape = CircleShape,
+        size = DpSize(keySize, keySize)
+    ) {
+        if (player.isLoading) {
+            // Still clickable while loading: a second press cancels the start.
+            LoadingRing(color = ink, size = if (large) 26.dp else 16.dp)
+        } else {
+            MillenniumIcon(
+                if (ui.isPlaying) Glyphs.Pause else Glyphs.Play,
+                contentDescription = stringResource(
+                    if (ui.isPlaying) Res.string.player_pause_content_description
+                    else Res.string.player_play_or_pause_content_description
+                ),
+                tint = ink,
+                size = if (large) 26.dp else 16.dp
+            )
+        }
+    }
+}
+
 /**
- * A transport button on the accent deck. Toggles show state with a translucent plate *and* full
- * opacity (inactive toggles sit at 70%), so the state isn't carried by colour alone.
+ * The "more" menu for the bar: everything that isn't transport. Download and alternative source
+ * live here so the bar stays quiet.
  */
 @Composable
-private fun DeckButton(
-    icon: ImageVector,
-    contentDescription: String,
-    onClick: () -> Unit,
-    toggle: Boolean = false,
-    active: Boolean = false,
-    enabled: Boolean = true
+internal fun PlayerMoreMenu(
+    player: PlayerController,
+    downloadsViewModel: DownloadsViewModel,
+    playerOptionsViewModel: PlayerOptionsViewModel,
+    onAlternativeSource: () -> Unit,
+    onGoToAlbum: (String) -> Unit
 ) {
-    val onFill = AppTheme.colors.onAccentFill
-    MillenniumIconButton(
-        onClick = onClick,
-        enabled = enabled,
-        style = MillenniumIconButtonStyle.Quiet,
-        background = SolidColor(if (active) onFill.copy(alpha = 0.2f) else Color.Transparent),
-        foreground = onFill,
-        shape = RoundedCornerShape(12.dp),
-        size = DpSize(40.dp, 40.dp)
+    val playerOptionsUiState by playerOptionsViewModel.uiState.collectAsStateWithLifecycle()
+    val currentTrack = player.currentTrack
+    MillenniumDropdownMenu(
+        expanded = playerOptionsUiState.isMoreOptionsMenuOpen,
+        onExpandedChange = { expanded ->
+            if (!expanded) playerOptionsViewModel.dismissMoreOptionsMenu()
+        },
+        side = AnchorSide.Top,
+        anchor = {
+            QuietGlyphButton(
+                icon = Glyphs.More,
+                contentDescription = stringResource(Res.string.player_more_options_content_description),
+                enabled = player.ui.currentQueueEntry != null,
+                onClick = { playerOptionsViewModel.showMoreOptionsMenu() }
+            )
+        }
     ) {
-        MillenniumIcon(
-            icon,
-            contentDescription = contentDescription,
-            // Skip buttons aren't toggles, so they stay at full strength.
-            tint = if (!toggle || active) onFill else onFill.copy(alpha = 0.7f),
-            size = 20.dp
-        )
+        MillenniumDropdownMenuItem(
+            label = stringResource(Res.string.player_download),
+            icon = Glyphs.Download,
+            onClick = {
+                playerOptionsViewModel.dismissMoreOptionsMenu()
+                currentTrack?.let { downloadsViewModel.downloadTrack(it) }
+            })
+        MillenniumDropdownMenuItem(
+            label = stringResource(Res.string.player_alternative_source),
+            icon = Glyphs.SwapSource,
+            onClick = {
+                playerOptionsViewModel.dismissMoreOptionsMenu()
+                onAlternativeSource()
+            })
+        MillenniumDropdownMenuItem(
+            label = stringResource(Res.string.player_go_to_album),
+            icon = Iconsax.IconsaxCd,
+            onClick = {
+                playerOptionsViewModel.dismissMoreOptionsMenu()
+                currentTrack?.album?.id?.let(onGoToAlbum)
+            })
+        MillenniumDropdownMenuItem(
+            label = stringResource(Res.string.player_sleep_timer),
+            icon = Iconsax.IconsaxMoon,
+            onClick = {
+                playerOptionsViewModel.dismissMoreOptionsMenu()
+                playerOptionsViewModel.showSleepTimerDialog()
+            })
+        MillenniumDropdownMenuItem(
+            label = stringResource(Res.string.player_track_details),
+            icon = Iconsax.IconsaxInformation,
+            onClick = {
+                playerOptionsViewModel.dismissMoreOptionsMenu()
+                playerOptionsViewModel.showTrackDetails()
+            })
     }
 }
 
@@ -832,5 +921,34 @@ private fun SidePlayerEmptyState(modifier: Modifier = Modifier) {
             color = colors.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
+    }
+}
+
+/** Small indeterminate ring: a 270° arc turning once a second. Flat colour, no gradient. */
+@Composable
+internal fun LoadingRing(color: Color, size: Dp, modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "loading_ring")
+    val angle by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(1000, easing = LinearEasing)),
+        label = "loading_ring_angle"
+    )
+    Canvas(modifier = modifier.size(size)) {
+        val stroke = this.size.minDimension * 0.12f
+        rotate(angle) {
+            drawArc(
+                color = color,
+                startAngle = 0f,
+                sweepAngle = 270f,
+                useCenter = false,
+                topLeft = androidx.compose.ui.geometry.Offset(stroke / 2, stroke / 2),
+                size = androidx.compose.ui.geometry.Size(
+                    this.size.width - stroke,
+                    this.size.height - stroke
+                ),
+                style = Stroke(width = stroke, cap = StrokeCap.Round)
+            )
+        }
     }
 }

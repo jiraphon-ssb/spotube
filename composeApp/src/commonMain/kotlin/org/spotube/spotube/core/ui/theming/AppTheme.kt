@@ -25,16 +25,22 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.spotube.spotube.isDesktop
+import org.spotube.spotube.getPlatform
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.Font
+import org.spotube.millennium.composables.MillenniumButtonMotion
 import org.spotube.millennium.composables.MillenniumButtonThemeProperties
 import org.spotube.millennium.composables.MillenniumIconButtonThemeProperties
 import org.spotube.millennium.composables.MillenniumModalBottomSheetTheme
@@ -52,30 +58,34 @@ import org.spotube.millennium.theme.MillenniumTheme
 import org.spotube.millennium.theme.MillenniumThemeComponents
 import org.spotube.millennium.theme.MillenniumThemeConfig
 import org.spotube.millennium.theme.defaultMillenniumThemeComponents
-import org.spotube.spotube.modules.settings.Theme
 import org.spotube.spotube.modules.settings.UserSettings
 import spotube.composeapp.generated.resources.Res
-import spotube.composeapp.generated.resources.ibm_plex_sans_thai_bold
-import spotube.composeapp.generated.resources.ibm_plex_sans_thai_medium
-import spotube.composeapp.generated.resources.ibm_plex_sans_thai_regular
-import spotube.composeapp.generated.resources.ibm_plex_sans_thai_semibold
+import spotube.composeapp.generated.resources.anuphan_bold
+import spotube.composeapp.generated.resources.anuphan_medium
+import spotube.composeapp.generated.resources.anuphan_regular
+import spotube.composeapp.generated.resources.anuphan_semibold
+import spotube.composeapp.generated.resources.sriracha_regular
 
 // ---------------------------------------------------------------------------------------------
 // Tokens
 // ---------------------------------------------------------------------------------------------
 
 /**
- * The flat colour ramp the whole app is drawn from.
+ * The flat colour ramp the whole app is drawn from: a record shop at night.
  *
- * Spotube's look is deliberately flat: no gel, bevel or glass gradients. Depth comes only from
- * the neutral ladder `canvas < panel < card < hover` and hairline [border]s.
+ * Warm near-black floor, crate browns, paper-white text and one price-sticker red. Depth comes from
+ * the ladder `canvas < panel < card < hover` (floor, crate, crate lip) and hairline [border]s.
+ * [kraft] is the divider-card colour (genre tabs, index tabs, ledges); [sticker] is the rare
+ * staff-pick yellow. No gradients: [accentStart] and [accentEnd] are the same colour.
  *
  * - [canvas]: the page behind scrolling content.
  * - [panel]: fixed chrome (sidebar, player panel, sheets, menus).
  * - [card]: anything on a panel or canvas that needs its own plane (cards, wells, selection).
  * - [hover]: pointer feedback and the brightest neutral.
  * - [accent]: accent for text and icons drawn on neutrals (contrast-checked on [canvas]).
- * - [accentFill]: accent for filled controls; [onAccentFill] is at least 4.5:1 on it.
+ * - [accentFill]: accent for filled controls; [onAccentFill] is at least 4.5:1 on it (and on
+ *   both gradient stops).
+ * - [accentStart]/[accentEnd]: the accent gradient's stops.
  */
 @Immutable
 data class SpotubeTokens(
@@ -89,60 +99,62 @@ data class SpotubeTokens(
     val accent: Color,
     val accentFill: Color,
     val onAccentFill: Color,
+    val accentStart: Color,
+    val accentEnd: Color,
     val success: Color,
     val danger: Color,
     val scrim: Color,
-    val isDark: Boolean
+    /** Divider-card kraft: tabs, the now-playing ledge. */
+    val kraft: Color = Color(0xFFC8A278),
+    /** Ink on [kraft]. */
+    val onKraft: Color = Color(0xFF2B1E12),
+    /** Staff-pick sticker yellow: "new" tags and the shelf-talker tape only. */
+    val sticker: Color = Color(0xFFF4C542)
 )
 
+// Night shop floor. Paper text is ~15:1 on the floor, pencil grey ~6.5:1; the red accent for text
+// is ~5:1 on the floor and the near-black ink on the red fill ~5:1.
 private val DarkNeutrals = SpotubeTokens(
-    canvas = Color(0xFF111114),
-    panel = Color(0xFF18181C),
-    card = Color(0xFF1F1F24),
-    hover = Color(0xFF27272D),
-    border = Color(0xFF2A2A31),
-    text = Color(0xFFEDEDF0),
-    muted = Color(0xFF9696A0),
-    accent = Color(0xFF8B94FF),
-    accentFill = Color(0xFF525DEB),
-    onAccentFill = Color.White,
-    success = Color(0xFF6EE7A0),
-    danger = Color(0xFFFF8A9B),
-    scrim = Color(0xCC000000),
-    isDark = true
+    canvas = Color(0xFF120E0B),
+    panel = Color(0xFF0D0A08),
+    card = Color(0xFF1B1511),
+    hover = Color(0xFF2A2019),
+    border = Color(0xFF3A2E24),
+    text = Color(0xFFEFE6D6),
+    muted = Color(0xFFA39686),
+    accent = Color(0xFFF05A44),
+    accentFill = Color(0xFFE8432F),
+    onAccentFill = Color(0xFF1A0B07),
+    accentStart = Color(0xFFE8432F),
+    accentEnd = Color(0xFFE8432F),
+    success = Color(0xFF8FCB7E),
+    danger = Color(0xFFFF6B5B),
+    scrim = Color(0xCC000000)
 )
 
-private val LightNeutrals = SpotubeTokens(
-    canvas = Color(0xFFF4F4F7),
-    panel = Color(0xFFFFFFFF),
-    card = Color(0xFFEFEFF3),
-    hover = Color(0xFFE6E6EC),
-    border = Color(0xFFDCDCE3),
-    text = Color(0xFF17171C),
-    muted = Color(0xFF5A5A66),
-    accent = Color(0xFF3F4BD6),
-    accentFill = Color(0xFF4F5AE8),
-    onAccentFill = Color.White,
-    success = Color(0xFF157F46),
-    danger = Color(0xFFC0263D),
-    scrim = Color(0x66000000),
-    isDark = false
-)
-
-/** Resolves the token set for one accent family ([MillenniumPalette]) and appearance. */
-fun spotubeTokens(palette: MillenniumPalette, dark: Boolean): SpotubeTokens {
-    val base = if (dark) DarkNeutrals else LightNeutrals
+/**
+ * Resolves the token set for one accent family ([MillenniumPalette]). Spotube has a single,
+ * dark appearance; the palette only swaps the accent.
+ */
+fun spotubeTokens(palette: MillenniumPalette): SpotubeTokens {
+    val base = DarkNeutrals
+    // Palette slots keep Millennium's enum names; the looks are Sticker red (default slot), Kraft
+    // and Staff-pick yellow. All flat, all with dark ink on the fill.
     return when (palette) {
         MillenniumPalette.Blue -> base
         MillenniumPalette.Orange -> base.copy(
-            accent = if (dark) Color(0xFFFDA769) else Color(0xFFB04A0A),
-            accentFill = Color(0xFFFB923C),
-            onAccentFill = Color(0xFF2A1204)
+            accent = Color(0xFFD9B48A),
+            accentFill = Color(0xFFC8A278),
+            onAccentFill = Color(0xFF2B1E12),
+            accentStart = Color(0xFFC8A278),
+            accentEnd = Color(0xFFC8A278)
         )
         MillenniumPalette.Lime -> base.copy(
-            accent = if (dark) Color(0xFFBEF264) else Color(0xFF4D7C0F),
-            accentFill = Color(0xFFA3E635),
-            onAccentFill = Color(0xFF172506)
+            accent = Color(0xFFF4C542),
+            accentFill = Color(0xFFF4C542),
+            onAccentFill = Color(0xFF2A1D05),
+            accentStart = Color(0xFFF4C542),
+            accentEnd = Color(0xFFF4C542)
         )
     }
 }
@@ -170,13 +182,15 @@ fun SpotubeTokens.toMillenniumColors(): MillenniumColors = MillenniumColors(
     scrim = scrim
 )
 
+// Millennium keeps a light and a dark role set per palette; both slots get the one dark ramp so
+// nothing can ever resolve to a light surface.
 private val SpotubeColorSchemes = MillenniumColorSchemes(
-    light = spotubeTokens(MillenniumPalette.Blue, dark = false).toMillenniumColors(),
-    dark = spotubeTokens(MillenniumPalette.Blue, dark = true).toMillenniumColors(),
-    orangeLight = spotubeTokens(MillenniumPalette.Orange, dark = false).toMillenniumColors(),
-    orangeDark = spotubeTokens(MillenniumPalette.Orange, dark = true).toMillenniumColors(),
-    limeLight = spotubeTokens(MillenniumPalette.Lime, dark = false).toMillenniumColors(),
-    limeDark = spotubeTokens(MillenniumPalette.Lime, dark = true).toMillenniumColors(),
+    light = spotubeTokens(MillenniumPalette.Blue).toMillenniumColors(),
+    dark = spotubeTokens(MillenniumPalette.Blue).toMillenniumColors(),
+    orangeLight = spotubeTokens(MillenniumPalette.Orange).toMillenniumColors(),
+    orangeDark = spotubeTokens(MillenniumPalette.Orange).toMillenniumColors(),
+    limeLight = spotubeTokens(MillenniumPalette.Lime).toMillenniumColors(),
+    limeDark = spotubeTokens(MillenniumPalette.Lime).toMillenniumColors(),
 )
 
 // ---------------------------------------------------------------------------------------------
@@ -219,8 +233,29 @@ data class AppColors(
     /** Content drawn on [accentFill]; 4.5:1 or better. */
     val onAccentFill: Color,
     /** Pointer-hover / pressed neutral. */
-    val hover: Color
+    val hover: Color,
+    /** The accent gradient (start → end), for the few surfaces that should glow. */
+    val accentBrush: Brush,
+    /** [accentBrush] one notch brighter, for hover. */
+    val accentBrushHover: Brush,
+    /** [accentBrush] one notch darker, for press. */
+    val accentBrushPressed: Brush,
+    /** Divider-card kraft (genre/index tabs, ledges) and the ink drawn on it. */
+    val kraft: Color,
+    val onKraft: Color,
+    /** Staff-pick sticker yellow, for "new" tags and the shelf-talker tape. */
+    val sticker: Color
 )
+
+/** The accent gradient as a left-to-right brush, optionally nudged lighter/darker. */
+fun SpotubeTokens.accentBrush(lighten: Float = 0f, darken: Float = 0f): Brush {
+    fun Color.adjust() = when {
+        lighten > 0f -> lerp(this, Color.White, lighten)
+        darken > 0f -> lerp(this, Color.Black, darken)
+        else -> this
+    }
+    return Brush.horizontalGradient(listOf(accentStart.adjust(), accentEnd.adjust()))
+}
 
 /** Maps the flat token ramp onto the app's role names. */
 fun appColorsFrom(t: SpotubeTokens): AppColors {
@@ -256,16 +291,15 @@ fun appColorsFrom(t: SpotubeTokens): AppColors {
         scrim = t.scrim,
         accentFill = t.accentFill,
         onAccentFill = t.onAccentFill,
-        hover = t.hover
+        hover = t.hover,
+        accentBrush = t.accentBrush(),
+        accentBrushHover = t.accentBrush(lighten = 0.12f),
+        accentBrushPressed = t.accentBrush(darken = 0.12f),
+        kraft = t.kraft,
+        onKraft = t.onKraft,
+        sticker = t.sticker
     )
 }
-
-/**
- * Kept for source compatibility: callers that still hold a [MillenniumColors] get the flat Blue
- * ramp of the same appearance.
- */
-fun appColorsFrom(m: MillenniumColors): AppColors =
-    appColorsFrom(spotubeTokens(MillenniumPalette.Blue, dark = m.background.luminance() < 0.5f))
 
 // ---------------------------------------------------------------------------------------------
 // Typography
@@ -274,6 +308,8 @@ fun appColorsFrom(m: MillenniumColors): AppColors =
 /** Named text styles used by the app, independent of Material typography. */
 @Immutable
 data class AppTypography(
+    /** Hero titles only (playlist/album/artist name): big, tight, one per screen. */
+    val displayLarge: TextStyle,
     val displaySmall: TextStyle,
     val headlineLarge: TextStyle,
     val headlineMedium: TextStyle,
@@ -286,7 +322,9 @@ data class AppTypography(
     val bodySmall: TextStyle,
     val labelLarge: TextStyle,
     val labelMedium: TextStyle,
-    val labelSmall: TextStyle
+    val labelSmall: TextStyle,
+    /** Handwritten marker (Sriracha): divider-card labels and shelf-talker notes only. */
+    val hand: TextStyle
 )
 
 private fun style(
@@ -305,37 +343,46 @@ private fun style(
  * The app type scale. Thai stacks vowels and tone marks above and below the baseline, so leading is
  * roughly 1.5x at body sizes (vs. ~1.3x for Latin-only scales) to keep marks from colliding.
  */
-fun appTypography(fontFamily: FontFamily) = AppTypography(
-    displaySmall = style(fontFamily, 36, 48, FontWeight.Bold),
+fun appTypography(fontFamily: FontFamily, handFamily: FontFamily = fontFamily) = AppTypography(
+    displayLarge = style(fontFamily, 64, 76, FontWeight.Bold).copy(letterSpacing = (-1.8).sp),
+    displaySmall = style(fontFamily, 36, 48, FontWeight.Bold).copy(letterSpacing = (-0.6).sp),
     headlineLarge = style(fontFamily, 32, 44, FontWeight.Bold),
     headlineMedium = style(fontFamily, 28, 38, FontWeight.Bold),
     headlineSmall = style(fontFamily, 24, 34, FontWeight.SemiBold),
-    titleLarge = style(fontFamily, 20, 30, FontWeight.SemiBold),
+    titleLarge = style(fontFamily, 20, 28, FontWeight.SemiBold).copy(letterSpacing = (-0.2).sp),
     titleMedium = style(fontFamily, 16, 24, FontWeight.SemiBold),
     titleSmall = style(fontFamily, 14, 21, FontWeight.Medium),
-    bodyLarge = style(fontFamily, 16, 25),
+    bodyLarge = style(fontFamily, 15, 23),
     bodyMedium = style(fontFamily, 14, 22),
     bodySmall = style(fontFamily, 12, 18),
     labelLarge = style(fontFamily, 14, 21, FontWeight.Medium),
     labelMedium = style(fontFamily, 12, 18, FontWeight.Medium),
-    labelSmall = style(fontFamily, 11, 16, FontWeight.Medium)
+    labelSmall = style(fontFamily, 11, 16, FontWeight.Medium),
+    hand = style(handFamily, 17, 26)
 )
 
 val AppDefaultTypography = appTypography(FontFamily.SansSerif)
 
 /**
- * IBM Plex Sans Thai (SIL OFL 1.1): loopless Thai with IBM Plex Sans Latin in one family, so Thai
- * and English titles share metrics. Scripts it lacks (CJK, Arabic, ...) fall back to the platform.
+ * Anuphan (Cadson Demak, SIL OFL 1.1): loopless Thai with a matching Latin, so Thai and English
+ * titles share metrics. Scripts it lacks (CJK, Arabic, ...) fall back to the platform.
  */
 @Composable
 fun rememberAppFontFamily(): FontFamily {
-    val regular = Font(Res.font.ibm_plex_sans_thai_regular, FontWeight.Normal)
-    val medium = Font(Res.font.ibm_plex_sans_thai_medium, FontWeight.Medium)
-    val semiBold = Font(Res.font.ibm_plex_sans_thai_semibold, FontWeight.SemiBold)
-    val bold = Font(Res.font.ibm_plex_sans_thai_bold, FontWeight.Bold)
+    val regular = Font(Res.font.anuphan_regular, FontWeight.Normal)
+    val medium = Font(Res.font.anuphan_medium, FontWeight.Medium)
+    val semiBold = Font(Res.font.anuphan_semibold, FontWeight.SemiBold)
+    val bold = Font(Res.font.anuphan_bold, FontWeight.Bold)
     return remember(regular, medium, semiBold, bold) {
         FontFamily(regular, medium, semiBold, bold)
     }
+}
+
+/** Sriracha (Cadson Demak, SIL OFL 1.1): a Thai/Latin marker hand for divider cards and notes. */
+@Composable
+fun rememberHandFontFamily(): FontFamily {
+    val regular = Font(Res.font.sriracha_regular, FontWeight.Normal)
+    return remember(regular) { FontFamily(regular) }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -357,7 +404,7 @@ val AppDefaultShapes = AppShapes(
 )
 
 val LocalAppColors =
-    staticCompositionLocalOf { appColorsFrom(spotubeTokens(MillenniumPalette.Blue, dark = false)) }
+    staticCompositionLocalOf { appColorsFrom(spotubeTokens(MillenniumPalette.Blue)) }
 val LocalAppTypography = staticCompositionLocalOf { AppDefaultTypography }
 val LocalAppShapes = staticCompositionLocalOf { AppDefaultShapes }
 
@@ -375,7 +422,7 @@ object AppTheme {
 /**
  * The app's single source of truth for colour and type.
  *
- * Installs [MillenniumTheme] with flattened palettes ([SpotubeColorSchemes]) and component themes
+ * Installs [MillenniumTheme] (always dark) with flattened palettes ([SpotubeColorSchemes]) and component themes
  * stripped of shadows, orbs, glows and rims ([flatComponents]), then provides the app's
  * [AppColors], [AppTypography] and [AppShapes].
  */
@@ -384,28 +431,17 @@ fun SpotubeTheme(
     settings: UserSettings,
     content: @Composable () -> Unit
 ) {
-    val isDarkTheme = when (settings.theme) {
-        Theme.LIGHT -> false
-        Theme.DARK -> true
-        Theme.SYSTEM -> isSystemDarkTheme()
-    }
     val palette: MillenniumPalette = settings.palette
     val fontFamily = rememberAppFontFamily()
+    val handFamily = rememberHandFontFamily()
 
     // MillenniumTheme remembers its unstyled theme per config instance, so keep it stable.
-    val config = remember(palette, fontFamily) {
-        MillenniumThemeConfig(
-            palette = palette,
-            colorSchemes = SpotubeColorSchemes,
-            dark = flatComponents(spotubeTokens(palette, dark = true), fontFamily),
-            light = flatComponents(spotubeTokens(palette, dark = false), fontFamily)
-        )
-    }
-    val tokens = remember(palette, isDarkTheme) { spotubeTokens(palette, isDarkTheme) }
+    val config = remember(palette, fontFamily) { spotubeMillenniumConfig(palette, fontFamily) }
+    val tokens = remember(palette) { spotubeTokens(palette) }
     val colors = remember(tokens) { appColorsFrom(tokens) }
-    val typography = remember(fontFamily) { appTypography(fontFamily) }
+    val typography = remember(fontFamily, handFamily) { appTypography(fontFamily, handFamily) }
 
-    MillenniumTheme(dark = isDarkTheme, config = config) {
+    MillenniumTheme(dark = true, config = config) {
         MillenniumTooltipHost {
             CompositionLocalProvider(
                 LocalAppColors provides colors,
@@ -417,9 +453,24 @@ fun SpotubeTheme(
     }
 }
 
-/** Whether the active Millennium appearance is light. */
-@Composable
-fun isLightAppearance(): Boolean = MillenniumTheme.colors.background.luminance() > 0.5f
+/**
+ * The Millennium configuration Spotube runs with for [palette]: flat dark role sets and the
+ * flattened component themes. Also used by previews (e.g. the palette picker) so they show the
+ * real look rather than Millennium's stock gel styling.
+ */
+fun spotubeMillenniumConfig(
+    palette: MillenniumPalette,
+    fontFamily: FontFamily,
+    desktop: Boolean = getPlatform().isDesktop()
+): MillenniumThemeConfig {
+    val components = flatComponents(spotubeTokens(palette), fontFamily, desktop)
+    return MillenniumThemeConfig(
+        palette = palette,
+        colorSchemes = SpotubeColorSchemes,
+        dark = components,
+        light = components
+    )
+}
 
 // ---------------------------------------------------------------------------------------------
 // Flat component themes
@@ -447,6 +498,14 @@ private fun MillenniumControlStateProperty<MillenniumButtonThemeProperties>.flat
         )
     }
 
+/** Desktop button metrics: 36dp pill, 14sp semibold label. */
+private fun MillenniumButtonThemeProperties.compactButton(shape: androidx.compose.ui.graphics.Shape) = copy(
+    minSize = DpSize(64.dp, 36.dp),
+    padding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+    shape = shape,
+    textStyle = textStyle.copy(fontSize = 14.sp, lineHeight = 20.sp)
+)
+
 private fun MillenniumControlStateProperty<MillenniumIconButtonThemeProperties>.flatIconButton() =
     mapStates { _, s ->
         s.copy(
@@ -462,7 +521,7 @@ private fun MillenniumControlStateProperty<MillenniumIconButtonThemeProperties>.
  * Millennium's defaults with every skeuomorphic layer removed: drop shadows, glass orbs, inner
  * glows and bottom rims. Focus rings are kept (they are the keyboard affordance).
  */
-private fun flatComponents(t: SpotubeTokens, fontFamily: FontFamily): MillenniumThemeComponents {
+private fun flatComponents(t: SpotubeTokens, fontFamily: FontFamily, desktop: Boolean): MillenniumThemeComponents {
     val base = defaultMillenniumThemeComponents()
     val clear = Color.Transparent
 
@@ -478,31 +537,87 @@ private fun flatComponents(t: SpotubeTokens, fontFamily: FontFamily): Millennium
         )
     }
 
+    // Hover language, shared by every control: the fill steps one notch (lighter on hover,
+    // darker on press), nothing grows, glows or gains a coloured ring. Focus keeps its ring.
+    val borderHover = Color(0xFF3A3A44)
+    val still = MillenniumButtonMotion(hoverScale = 1f, pressedScale = 0.98f)
+
     val button = base.buttonTheme.copy(
-        primary = base.buttonTheme.primary.flatButton(),
-        secondary = base.buttonTheme.secondary.flatButton(),
+        primary = base.buttonTheme.primary.flatButton().mapStates { state, s ->
+            s.copy(
+                background = when (state) {
+                    MillenniumControlState.Hovered -> t.accentBrush(lighten = 0.12f)
+                    MillenniumControlState.Pressed -> t.accentBrush(darken = 0.12f)
+                    else -> t.accentBrush()
+                },
+                foreground = t.onAccentFill,
+                borderColor = if (state == MillenniumControlState.Focused) t.text else clear,
+                borderWidth = if (state == MillenniumControlState.Focused) 2.dp else 0.dp,
+                motion = still
+            )
+        },
+        secondary = base.buttonTheme.secondary.flatButton().mapStates { state, s ->
+            s.copy(
+                background = SolidColor(
+                    when (state) {
+                        MillenniumControlState.Hovered -> t.hover
+                        else -> t.card
+                    }
+                ),
+                borderColor = when (state) {
+                    MillenniumControlState.Focused -> t.accent
+                    MillenniumControlState.Hovered -> borderHover
+                    else -> t.border
+                },
+                borderWidth = if (state == MillenniumControlState.Focused) 2.dp else 1.dp,
+                motion = still
+            )
+        },
         quiet = base.buttonTheme.quiet.flatButton().mapStates { state, s ->
             when (state) {
-                MillenniumControlState.Hovered -> s.copy(background = SolidColor(t.hover), borderWidth = 0.dp)
-                MillenniumControlState.Pressed -> s.copy(background = SolidColor(t.card), borderWidth = 0.dp)
-                else -> s
+                MillenniumControlState.Hovered -> s.copy(background = SolidColor(t.hover), borderWidth = 0.dp, motion = still)
+                MillenniumControlState.Pressed -> s.copy(background = SolidColor(t.card), borderWidth = 0.dp, motion = still)
+                else -> s.copy(motion = still)
             }
         },
         danger = base.buttonTheme.danger.flatButton()
     )
 
+    val iconStill = MillenniumButtonMotion(hoverScale = 1f, pressedScale = 0.94f)
     val iconButton = base.iconButtonTheme.copy(
-        primary = base.iconButtonTheme.primary.flatIconButton(),
-        secondary = base.iconButtonTheme.secondary.flatIconButton(),
+        primary = base.iconButtonTheme.primary.flatIconButton().mapStates { state, s ->
+            s.copy(
+                background = when (state) {
+                    MillenniumControlState.Hovered -> t.accentBrush(lighten = 0.12f)
+                    MillenniumControlState.Pressed -> t.accentBrush(darken = 0.12f)
+                    else -> t.accentBrush()
+                },
+                foreground = t.onAccentFill,
+                borderWidth = if (state == MillenniumControlState.Focused) 2.dp else 0.dp,
+                borderColor = if (state == MillenniumControlState.Focused) t.text else clear,
+                motion = iconStill
+            )
+        },
+        secondary = base.iconButtonTheme.secondary.flatIconButton().mapStates { state, s ->
+            s.copy(
+                background = SolidColor(if (state == MillenniumControlState.Hovered) t.hover else t.card),
+                borderColor = when (state) {
+                    MillenniumControlState.Focused -> t.accent
+                    MillenniumControlState.Hovered -> borderHover
+                    else -> t.border
+                },
+                motion = iconStill
+            )
+        },
         // Quiet = toolbar buttons: a flat neutral plate on hover/press, no ring or tint.
         // Keyboard focus keeps its ring.
         quiet = base.iconButtonTheme.quiet.flatIconButton().mapStates { state, s ->
             when (state) {
-                MillenniumControlState.Hovered -> s.copy(background = SolidColor(t.hover), borderWidth = 0.dp)
-                MillenniumControlState.Pressed -> s.copy(background = SolidColor(t.card), borderWidth = 0.dp)
-                MillenniumControlState.Selected -> s.copy(background = SolidColor(t.card), borderWidth = 0.dp)
-                MillenniumControlState.Focused -> s.copy(background = SolidColor(t.hover), borderColor = t.accent)
-                else -> s.copy(borderWidth = 0.dp)
+                MillenniumControlState.Hovered -> s.copy(background = SolidColor(t.hover), borderWidth = 0.dp, motion = iconStill)
+                MillenniumControlState.Pressed -> s.copy(background = SolidColor(t.card), borderWidth = 0.dp, motion = iconStill)
+                MillenniumControlState.Selected -> s.copy(background = SolidColor(t.card), borderWidth = 0.dp, motion = iconStill)
+                MillenniumControlState.Focused -> s.copy(background = SolidColor(t.hover), borderColor = t.accent, motion = iconStill)
+                else -> s.copy(borderWidth = 0.dp, motion = iconStill)
             }
         },
         danger = base.iconButtonTheme.danger.flatIconButton()
@@ -525,7 +640,7 @@ private fun flatComponents(t: SpotubeTokens, fontFamily: FontFamily): Millennium
                 thumbSize = 12.dp,
                 activeThumbSize = 16.dp,
                 trackBackground = SolidColor(t.hover),
-                activeTrackBackground = SolidColor(t.text),
+                activeTrackBackground = t.accentBrush(),
                 thumbBackground = SolidColor(t.text),
                 trackBorderWidth = 0.dp,
                 thumbBorderWidth = 0.dp,
@@ -560,6 +675,64 @@ private fun flatComponents(t: SpotubeTokens, fontFamily: FontFamily): Millennium
         }
     )
 
+    // Menus: flat bordered panel. Row hover stays Millennium's accent fill (now a flat yellow
+    // with ink text and icons): Millennium tints row icons with onAccent while active, so a
+    // neutral plate would leave them ink-on-grey. Foreground is left to Millennium so
+    // destructive rows keep their red label.
+    val dropdown = base.dropdownMenuTheme.copy(
+        states = base.dropdownMenuTheme.states.mapStates { state, s ->
+            s.copy(
+                panelBackground = SolidColor(t.panel),
+                panelBorderColor = t.border,
+                panelBorderWidth = 1.dp,
+                panelShadowElevation = 0.dp,
+                panelGlowColor = clear,
+                itemBorderColor = if (state == MillenniumControlState.Focused) t.text else clear,
+                itemGlowColor = clear
+            )
+        }
+    )
+
+    // Segmented buttons: Millennium resolves Hovered before Selected, so the fill is left to its
+    // own selected/unselected logic (now flat) and hover shows as a brighter edge only.
+    val segmented = base.segmentedButtonTheme.copy(
+        states = base.segmentedButtonTheme.states.mapStates { state, s ->
+            s.copy(
+                borderColor = when (state) {
+                    MillenniumControlState.Focused -> t.accent
+                    MillenniumControlState.Hovered -> borderHover
+                    else -> t.border
+                },
+                innerGlowColor = clear,
+                motion = still
+            )
+        }
+    )
+
+    val tabs = base.tabGroupTheme.copy(
+        states = base.tabGroupTheme.states.mapStates { state, s ->
+            s.copy(
+                listBackground = SolidColor(t.panel),
+                listBorderColor = t.border,
+                selectedTabBackground = SolidColor(t.hover),
+                unselectedTabBackground = SolidColor(
+                    when (state) {
+                        MillenniumControlState.Hovered, MillenniumControlState.Pressed -> t.card
+                        else -> Color.Transparent
+                    }
+                ),
+                selectedTabForeground = t.text,
+                unselectedTabForeground = when (state) {
+                    MillenniumControlState.Hovered, MillenniumControlState.Pressed -> t.text
+                    else -> t.muted
+                },
+                tabBorderWidth = 0.dp,
+                tabElevation = 0.dp,
+                tabGlowColor = clear
+            )
+        }
+    )
+
     val sidebarBase = base.sidebarTheme
     val sidebar = sidebarBase.copy(
         root = sidebarBase.root.mapStates { _, s ->
@@ -576,7 +749,7 @@ private fun flatComponents(t: SpotubeTokens, fontFamily: FontFamily): Millennium
         content = sidebarBase.content.mapStates { _, s -> s.copy(showScrollbar = false) },
         header = sidebarBase.header.mapStates { _, s -> s.copy(dividerWidth = 0.dp) },
         // Groups: quiet 12sp labels, no bordered label row, a little air above each group.
-        group = sidebarBase.group.mapStates { _, s ->
+        group = sidebarBase.group.mapStates { state, s ->
             s.copy(
                 contentPadding = PaddingValues(start = 2.dp, end = 2.dp, top = 14.dp, bottom = 2.dp),
                 labelStyle = s.labelStyle.copy(
@@ -588,7 +761,13 @@ private fun flatComponents(t: SpotubeTokens, fontFamily: FontFamily): Millennium
                 ),
                 labelPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                 labelMinimumHeight = 28.dp,
-                labelBorderWidth = 0.dp
+                labelBorderWidth = 0.dp,
+                labelHoveredBackground = SolidColor(t.hover),
+                labelForeground = if (state == MillenniumControlState.Hovered || state == MillenniumControlState.Focused) {
+                    t.text
+                } else {
+                    t.muted
+                }
             )
         },
         // Items: resting labels a step softer than the selected one, outline icons in the
@@ -598,7 +777,7 @@ private fun flatComponents(t: SpotubeTokens, fontFamily: FontFamily): Millennium
                 labelStyle = s.labelStyle.copy(fontFamily = fontFamily),
                 shadowElevation = 0.dp,
                 innerGlowColor = clear,
-                minimumHeight = 38.dp,
+                minimumHeight = if (desktop) 36.dp else 44.dp,
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
                 iconSize = 19.dp,
                 iconLabelSpacing = 12.dp,
@@ -634,14 +813,68 @@ private fun flatComponents(t: SpotubeTokens, fontFamily: FontFamily): Millennium
         }
     )
 
+    // Desktop scale (mouse, not thumbs): Millennium's 44–56dp touch metrics read as chunky toys
+    // on a desktop window. Phones keep the touch-friendly defaults.
+    val pill = RoundedCornerShape(percent = 50)
+    val buttonM = if (!desktop) button else button.copy(
+        primary = button.primary.mapStates { _, s -> s.compactButton(pill) },
+        secondary = button.secondary.mapStates { _, s -> s.compactButton(pill) },
+        quiet = button.quiet.mapStates { _, s -> s.compactButton(pill) },
+        danger = button.danger.mapStates { _, s -> s.compactButton(pill) }
+    )
+    val iconButtonM = if (!desktop) iconButton else iconButton.copy(
+        primary = iconButton.primary.mapStates { _, s -> s.copy(size = DpSize(36.dp, 36.dp), iconSize = 20.dp) },
+        secondary = iconButton.secondary.mapStates { _, s -> s.copy(size = DpSize(36.dp, 36.dp), iconSize = 20.dp) },
+        quiet = iconButton.quiet.mapStates { _, s -> s.copy(size = DpSize(36.dp, 36.dp), iconSize = 20.dp) },
+        danger = iconButton.danger.mapStates { _, s -> s.copy(size = DpSize(36.dp, 36.dp), iconSize = 20.dp) }
+    )
+    val textField = base.textFieldTheme.copy(
+        states = base.textFieldTheme.states.mapStates { state, s ->
+            val flat = s.copy(
+                background = SolidColor(t.card),
+                borderColor = when (state) {
+                    MillenniumControlState.Focused -> t.accent
+                    MillenniumControlState.Error -> t.danger
+                    else -> Color.Transparent
+                },
+                insetShadeColor = clear,
+                innerGlowColor = clear,
+                bottomRimColor = clear
+            )
+            if (desktop) {
+                flat.copy(
+                    minimumHeight = 36.dp,
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                    shape = RoundedCornerShape(10.dp)
+                )
+            } else {
+                flat
+            }
+        }
+    )
+    val listTileM = if (!desktop) listTile else listTile.copy(
+        states = listTile.states.mapStates { _, s ->
+            s.copy(minimumHeight = 52.dp, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp))
+        }
+    )
+    val segmentedM = if (!desktop) segmented else segmented.copy(
+        states = segmented.states.mapStates { _, s ->
+            s.copy(minimumHeight = 32.dp, contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp))
+        }
+    )
+
     return base.copy(
         textTheme = MillenniumTextTheme(MillenniumControlStateProperty.all(text)),
-        buttonTheme = button,
-        iconButtonTheme = iconButton,
+        buttonTheme = buttonM,
+        iconButtonTheme = iconButtonM,
+        textFieldTheme = textField,
         cardTheme = card,
         sliderTheme = slider,
         sidebarTheme = sidebar,
-        listTileTheme = listTile,
+        listTileTheme = listTileM,
+        dropdownMenuTheme = dropdown,
+        segmentedButtonTheme = segmentedM,
+        tabGroupTheme = tabs,
         topAppBarTheme = MillenniumTopAppBarTheme(
             properties = base.topAppBarTheme.properties.copy(separatorColor = clear)
         ),

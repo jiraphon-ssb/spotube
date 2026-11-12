@@ -129,11 +129,6 @@
     <string name="settings_country_subtitle_current">البلد المستخدم للمحتوى والتوفر. الحالي: %1$s</string>
     <string name="settings_option_name_and_code">%1$s (%2$s)</string>
 
-    <string name="settings_theme_title">السمة</string>
-    <string name="settings_theme_subtitle_current">اختر كيف يتوافق Spotube مع مظهر نظامك. الحالية: %1$s</string>
-    <string name="settings_theme_light">فاتح</string>
-    <string name="settings_theme_dark">داكن</string>
-    <string name="settings_theme_system">النظام</string>
 
     <string name="settings_surface_theme_title">السطح</string>
     <string name="settings_surface_theme_subtitle_current">مادة خلفية التطبيق. الحالية: %1$s</string>

@@ -36,4 +36,4 @@ fun Modifier.dragScrollable(rowState: LazyListState): Modifier =
             // Invert drag direction so content follows direct-manipulation behavior.
             rowState.dispatchRawDelta(-dragAmount.x)
         }
-    } else Modifier
+    } else this

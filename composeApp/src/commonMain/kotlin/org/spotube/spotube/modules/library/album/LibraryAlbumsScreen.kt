@@ -50,7 +50,7 @@ fun LibraryAlbumsScreen(
                     )
                 }
             } else LibraryMediaCollection<MetadataAlbum.Detailed>(
-                items = data?.items.orEmpty(), itemKey = { it.id }, viewMode = viewMode,
+                items = data?.items.orEmpty(), itemKey = { it.id }, viewMode = viewMode, indexLabel = { it.title },
                 loading = current is LibraryAlbumsState.Loading,
                 loadingMore = current is LibraryAlbumsState.Data.LoadingMore,
                 onViewportChanged = viewModel::onItemsVisible,

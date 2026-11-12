@@ -21,11 +21,23 @@ package org.spotube.spotube.core.ui.component.cards
 import org.spotube.millennium.composables.MillenniumIcon
 import org.spotube.millennium.composables.MillenniumIconButton
 import org.spotube.millennium.composables.MillenniumIconButtonStyle
-import com.composeunstyled.LocalTextStyle
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.DpSize
+import org.spotube.spotube.core.ui.component.BigPlayButton
+import org.spotube.spotube.resources.glyphs.Glyphs
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -52,15 +64,9 @@ import org.spotube.spotube.core.ui.component.LocalSharedTransitionScope
 import org.spotube.spotube.core.ui.component.sharedElementOrNone
 import org.spotube.spotube.core.ui.misc.TextWithShimmer
 import org.spotube.spotube.core.ui.misc.shimmerApply
-import org.spotube.spotube.resources.iconsax.Iconsax
-import org.spotube.spotube.resources.iconsax.IconsaxAddSquare
-import org.spotube.spotube.resources.iconsax.IconsaxPause
-import org.spotube.spotube.resources.iconsax.IconsaxPlay
 import org.jetbrains.compose.resources.stringResource
 import spotube.composeapp.generated.resources.Res
 import spotube.composeapp.generated.resources.player_add_to_queue_content_description
-import spotube.composeapp.generated.resources.player_pause_content_description
-import spotube.composeapp.generated.resources.player_play_content_description
 import spotube.composeapp.generated.resources.media_preview_title
 import spotube.composeapp.generated.resources.media_preview_subtitle
 
@@ -105,7 +111,7 @@ fun PlayableCard(
         onClick = onClick ?: onPlay,
         interactive = onClick != null || onPlay != null || onAddToQueue != null
     ) { highlighted ->
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
             Box(modifier = Modifier.fillMaxWidth().shimmerApply()) {
                 MediaArtwork(
                     model = imageURL,
@@ -127,67 +133,58 @@ fun PlayableCard(
                         modifier = Modifier.fillMaxWidth().aspectRatio(1f).padding(8.dp),
                         contentAlignment = Alignment.BottomEnd
                     ) {
+                        // The play key rises out of the artwork's corner on hover (always shown on
+                        // touch, and while this collection plays or is starting).
                         this@Column.AnimatedVisibility(
                             visible = highlighted || touchInput || (isPlaying && onPlay != null) ||
                                 playLoading || addToQueueLoading,
-                            enter = fadeIn(),
-                            exit = fadeOut()
+                            enter = fadeIn(tween(160)) + slideInVertically(tween(200)) { it / 3 },
+                            exit = fadeOut(tween(120)) + slideOutVertically(tween(160)) { it / 3 }
                         ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.padding(4.dp)
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                // While this collection is playing the play/pause toggle stays
-                                // visible and the add-to-queue action is hidden entirely.
+                                // While this collection is playing only the play/pause key stays.
                                 onAddToQueue?.takeIf { !isPlaying }?.let {
                                     MillenniumIconButton(
                                         onClick = onAddToQueue,
                                         loading = addToQueueLoading,
-                                        modifier = Modifier.size(34.dp),
-                                        style = MillenniumIconButtonStyle.Secondary
+                                        style = MillenniumIconButtonStyle.Quiet,
+                                        background = SolidColor(Color.Black.copy(alpha = 0.6f)),
+                                        shape = CircleShape,
+                                        size = DpSize(36.dp, 36.dp),
+                                        contentDescription = stringResource(
+                                            Res.string.player_add_to_queue_content_description
+                                        )
                                     ) {
                                         MillenniumIcon(
-                                            imageVector = Iconsax.IconsaxAddSquare,
-                                            contentDescription = stringResource(
-                                                Res.string.player_add_to_queue_content_description
-                                            ),
+                                            imageVector = Glyphs.AddTo,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            size = 18.dp
                                         )
                                     }
-                                    Spacer(modifier = Modifier.height(8.dp))
                                 }
                                 onPlay?.let {
-                                    MillenniumIconButton(
-                                        onClick = onPlay,
+                                    BigPlayButton(
+                                        isPlaying = isPlaying,
                                         loading = playLoading,
-                                        modifier = Modifier.size(34.dp),
-                                        style = MillenniumIconButtonStyle.Primary
-
-                                    ) {
-                                        MillenniumIcon(
-                                            imageVector = if (isPlaying) {
-                                                Iconsax.IconsaxPause
-                                            } else Iconsax.IconsaxPlay,
-                                            contentDescription = stringResource(
-                                                if (isPlaying) {
-                                                    Res.string.player_pause_content_description
-                                                } else {
-                                                    Res.string.player_play_content_description
-                                                }
-                                            ),
-                                            tint = LocalTextStyle.current.color
-                                        )
-                                    }
+                                        onClick = onPlay,
+                                        size = 44.dp,
+                                        modifier = Modifier.shadow(10.dp, CircleShape)
+                                    )
                                 }
                             }
                         }
                     }
             }
             Column(
-                modifier = Modifier.fillMaxWidth().padding(12.dp)
+                modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 10.dp, bottom = 4.dp)
             ) {
                 TextWithShimmer(
                     text = title,
-                    style = AppTheme.typography.titleSmall,
+                    style = AppTheme.typography.titleSmall.copy(fontWeight = FontWeight.Medium),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

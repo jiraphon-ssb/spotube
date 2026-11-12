@@ -69,6 +69,8 @@ import org.spotube.spotube.core.ui.component.PlaylistCard
 import org.spotube.spotube.core.ui.component.TrackCard
 import org.spotube.spotube.core.ui.component.UserCard
 import org.spotube.spotube.core.ui.component.FeaturedCarousel
+import org.spotube.spotube.core.ui.component.DividerTabs
+import androidx.compose.foundation.shape.RoundedCornerShape
 import org.spotube.spotube.core.ui.component.VerticalScrollbar
 import org.spotube.spotube.core.ui.component.cards.PlayableCard
 import org.spotube.spotube.core.ui.component.dragScrollable
@@ -89,6 +91,16 @@ import spotube.composeapp.generated.resources.Res
 import spotube.composeapp.generated.resources.support_button_label
 import spotube.composeapp.generated.resources.devices_title
 import spotube.composeapp.generated.resources.home_title_browse
+import spotube.composeapp.generated.resources.home_shelf_next
+import spotube.composeapp.generated.resources.home_shelf_previous
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.layout.Row
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextOverflow
+import kotlinx.coroutines.launch
+import org.spotube.spotube.resources.glyphs.Glyphs
 import spotube.composeapp.generated.resources.jam_screen_title
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -246,7 +258,7 @@ private fun HomeContent(
         state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = contentPadding,
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        verticalArrangement = Arrangement.spacedBy(32.dp)
     ) {
         when (state) {
             is HomeScreenState.Loading -> {
@@ -395,31 +407,57 @@ private fun HomeSection(
     modifier: Modifier = Modifier
 ) {
     val rowState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
 
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        if (!subtitle.isNullOrEmpty()) Text(
-            text = subtitle,
-            style = AppTheme.typography.labelMedium.copy(
-                color = AppTheme.colors.secondary,
-                fontWeight = FontWeight.Medium
-            ),
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
-        Text(
-            text = title,
-            style = AppTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(horizontal = 16.dp).offset(y = (-12).dp)
-        )
+        // Title first, description under it; arrows page the shelf for mouse users.
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp),
+            verticalAlignment = Alignment.Bottom
+        ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = title,
+                    style = AppTheme.typography.headlineSmall,
+                    color = AppTheme.colors.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (!subtitle.isNullOrEmpty()) Text(
+                    text = subtitle,
+                    style = AppTheme.typography.bodySmall,
+                    color = AppTheme.colors.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            if (rowState.canScrollBackward || rowState.canScrollForward) {
+                val page = with(density) { 520.dp.toPx() }
+                ShelfArrow(
+                    icon = Glyphs.ChevronLeft,
+                    contentDescription = stringResource(Res.string.home_shelf_previous),
+                    enabled = rowState.canScrollBackward,
+                    onClick = { scope.launch { rowState.animateScrollBy(-page) } }
+                )
+                ShelfArrow(
+                    icon = Glyphs.ChevronRight,
+                    contentDescription = stringResource(Res.string.home_shelf_next),
+                    enabled = rowState.canScrollForward,
+                    onClick = { scope.launch { rowState.animateScrollBy(page) } }
+                )
+            }
+        }
 
+        // Cards carry their own 8dp inset (the hover plate), so artwork lines up with the title.
         LazyRow(
             state = rowState,
             modifier = Modifier.dragScrollable(rowState),
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.Top
         ) {
             items(items) { browseItem ->
@@ -436,30 +474,41 @@ private fun HomeSection(
 }
 
 @Composable
+private fun ShelfArrow(icon: ImageVector, contentDescription: String, enabled: Boolean, onClick: () -> Unit) {
+    MillenniumIconButton(
+        onClick = onClick,
+        enabled = enabled,
+        style = MillenniumIconButtonStyle.Quiet,
+        contentDescription = contentDescription
+    ) {
+        MillenniumIcon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (enabled) AppTheme.colors.onSurface else AppTheme.colors.onSurfaceVariant.copy(alpha = 0.4f),
+            size = 20.dp
+        )
+    }
+}
+
+@Composable
 private fun GenreTabs(
     genres: List<MetadataBrowseGenre>,
     selectedGenreId: String?,
     onGenreSelected: (String) -> Unit
 ) {
-    val rowState = rememberLazyListState()
-
-    LazyRow(
-        state = rowState,
-        modifier = Modifier.dragScrollable(rowState),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        items(genres) { genre ->
-            MillenniumButton(
-                onClick = { onGenreSelected(genre.id) },
-                style = if (selectedGenreId == genre.id) {
-                    MillenniumButtonStyle.Primary
-                } else {
-                    MillenniumButtonStyle.Secondary
-                }
-            ) {
-                Text(genre.name)
-            }
-        }
+    // Genres are the crate's divider cards: kraft tabs standing on a kraft rule.
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        DividerTabs(
+            labels = genres.map { it.name },
+            selectedIndex = genres.indexOfFirst { it.id == selectedGenreId },
+            onSelect = { onGenreSelected(genres[it].id) },
+            modifier = Modifier.padding(start = 12.dp)
+        )
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(3.dp)
+                .background(AppTheme.colors.kraft, RoundedCornerShape(2.dp))
+        )
     }
 }

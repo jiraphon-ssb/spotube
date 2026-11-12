@@ -119,11 +119,6 @@
     <string name="settings_country_subtitle_current">Quốc gia dùng cho nội dung và tính khả dụng. Hiện tại: %1$s</string>
     <string name="settings_option_name_and_code">%1$s (%2$s)</string>
 
-    <string name="settings_theme_title">Chủ đề</string>
-    <string name="settings_theme_subtitle_current">Chọn cách Spotube khớp với giao diện hệ thống. Hiện tại: %1$s</string>
-    <string name="settings_theme_light">Sáng</string>
-    <string name="settings_theme_dark">Tối</string>
-    <string name="settings_theme_system">Theo hệ thống</string>
 
     <string name="settings_surface_theme_title">Bề mặt</string>
     <string name="settings_surface_theme_subtitle_current">Chất liệu nền của ứng dụng. Hiện tại: %1$s</string>

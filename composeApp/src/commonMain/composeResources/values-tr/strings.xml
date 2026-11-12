@@ -121,11 +121,6 @@
     <string name="settings_country_subtitle_current">İçerik ve kullanılabilirlik için bölge ülkesi. Geçerli: %1$s</string>
     <string name="settings_option_name_and_code">%1$s (%2$s)</string>
 
-    <string name="settings_theme_title">Tema</string>
-    <string name="settings_theme_subtitle_current">Spotube\'un sistem görünümüne nasıl uyacağını seç. Geçerli: %1$s</string>
-    <string name="settings_theme_light">Açık</string>
-    <string name="settings_theme_dark">Koyu</string>
-    <string name="settings_theme_system">Sistem</string>
 
     <string name="settings_surface_theme_title">Yüzey</string>
     <string name="settings_surface_theme_subtitle_current">Uygulamanın arka plan malzemesi. Geçerli: %1$s</string>

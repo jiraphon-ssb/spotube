@@ -115,8 +115,11 @@ fun AdaptiveDropdownBottomSheet(
     menuMinWidth: Dp = 200.dp,
     header: @Composable (() -> Unit)? = null,
     headerDisplayMode: HeaderDisplayMode = HeaderDisplayMode.Always,
-    filter: ((AdaptiveMenuItem, String) -> Boolean)? = null) {
+    filter: ((AdaptiveMenuItem, String) -> Boolean)? = null,
+    /** Told whenever the menu/sheet opens or closes (e.g. to keep a hover-only trigger shown). */
+    onExpandedChange: ((Boolean) -> Unit)? = null) {
     var expanded by remember { mutableStateOf(false) }
+    LaunchedEffect(expanded) { onExpandedChange?.invoke(expanded) }
     val isLargeScreen = currentWindowWidthBreakpoint() isAtLeast WindowBreakpoints.Medium
 
     Box(modifier = modifier) {

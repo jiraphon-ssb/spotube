@@ -216,8 +216,21 @@ object Glyphs {
         )
     }
 
+    val Close: ImageVector by lazy { glyph("Close", strokes = listOf("M18 6 6 18", "m6 6 12 12")) }
+
+    val PanelRight: ImageVector by lazy {
+        glyph(
+            "PanelRight",
+            strokes = listOf("M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z", "M15 3v18")
+        )
+    }
+
     val Sort: ImageVector by lazy {
         glyph("Sort", strokes = listOf("m3 16 4 4 4-4", "M7 20V4", "m21 8-4-4-4 4", "M17 4v16"))
+    }
+
+    val Clock: ImageVector by lazy {
+        glyph("Clock", strokes = listOf("M22 12A10 10 0 1 1 2 12A10 10 0 1 1 22 12Z", "M12 6v6l4 2"))
     }
 
     val ChevronLeft: ImageVector by lazy { glyph("ChevronLeft", strokes = listOf("m15 18-6-6 6-6")) }

@@ -43,7 +43,6 @@ import org.spotube.spotube.modules.library.local_tracks.LocalTracksBreadcrumb
 import org.spotube.spotube.modules.library.local_tracks.localTracksUiState
 import org.spotube.spotube.modules.library.local_tracks.media.LocalMediaFolder
 import org.spotube.spotube.modules.library.local_tracks.media.LocalMediaTrack
-import org.spotube.spotube.modules.settings.Theme
 import org.spotube.spotube.modules.settings.UserSettings
 import java.io.File
 import org.spotube.millennium.theme.MillenniumTheme
@@ -130,7 +129,7 @@ class MediaLibraryUiTest {
         var cleared = 0
         val state = downloadsUiState(downloadItems)
         ImageComposeScene(960, 660) {
-            SpotubeTheme(UserSettings(theme = Theme.DARK)) {
+            SpotubeTheme(UserSettings()) {
                 Column(Modifier.fillMaxSize()) {
                     MillenniumTopAppBar(
                         title = { DownloadsToolbarTitle() },
@@ -168,7 +167,7 @@ class MediaLibraryUiTest {
             ), ""
         )
         ImageComposeScene(360, 48) {
-            SpotubeTheme(UserSettings(theme = Theme.DARK)) {
+            SpotubeTheme(UserSettings()) {
                 LocalTracksBreadcrumb(
                     state,
                     { navigatedUp++ },
@@ -191,7 +190,7 @@ class MediaLibraryUiTest {
     @Test
     fun renderScreensAndCollectionModesInLightAndDark() {
         val output = File("build/reports/media-library-ui").apply { mkdirs() }
-        for (theme in listOf(Theme.DARK, Theme.LIGHT)) {
+        for (theme in listOf("dark")) { // single (dark) appearance
             for (width in listOf(360, 960)) {
                 render(output, "downloads-$theme-$width", width, theme) {
                     val state = downloadsUiState(downloadItems)
@@ -294,7 +293,7 @@ class MediaLibraryUiTest {
         for (avatar in listOf(false, true)) {
             var clicks = 0
             ImageComposeScene(192, 260) {
-                SpotubeTheme(UserSettings(theme = Theme.DARK)) {
+                SpotubeTheme(UserSettings()) {
                     Box(
                         Modifier.fillMaxSize().background(MillenniumTheme.colors.background)
                             .padding(16.dp)
@@ -348,7 +347,7 @@ class MediaLibraryUiTest {
         var navigations = 0
         var plays = 0
         ImageComposeScene(360, 100) {
-            SpotubeTheme(UserSettings(theme = Theme.DARK)) {
+            SpotubeTheme(UserSettings()) {
                 PlayableListTile(tracks[0].name, onClick = { navigations++ }, onPlay = { plays++ })
             }
         }.use { scene ->
@@ -381,11 +380,11 @@ class MediaLibraryUiTest {
         output: File,
         name: String,
         width: Int,
-        theme: Theme,
+        theme: String,
         content: @Composable () -> Unit
     ) {
         ImageComposeScene(width, 660) {
-            SpotubeTheme(UserSettings(theme = theme)) {
+            SpotubeTheme(UserSettings()) {
                 Box(
                     Modifier.fillMaxSize().background(MillenniumTheme.colors.background)
                 ) { content() }

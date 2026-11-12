@@ -119,11 +119,6 @@
     <string name="settings_country_subtitle_current">Negara untuk konten dan ketersediaan. Saat ini: %1$s</string>
     <string name="settings_option_name_and_code">%1$s (%2$s)</string>
 
-    <string name="settings_theme_title">Tema</string>
-    <string name="settings_theme_subtitle_current">Pilih cara Spotube menyesuaikan dengan tampilan sistem. Saat ini: %1$s</string>
-    <string name="settings_theme_light">Terang</string>
-    <string name="settings_theme_dark">Gelap</string>
-    <string name="settings_theme_system">Sistem</string>
 
     <string name="settings_surface_theme_title">Permukaan</string>
     <string name="settings_surface_theme_subtitle_current">Material latar belakang aplikasi. Saat ini: %1$s</string>

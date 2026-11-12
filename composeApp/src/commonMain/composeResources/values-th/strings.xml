@@ -119,11 +119,6 @@
     <string name="settings_country_subtitle_current">ประเทศสำหรับเนื้อหาและความพร้อมใช้งาน ปัจจุบัน: %1$s</string>
     <string name="settings_option_name_and_code">%1$s (%2$s)</string>
 
-    <string name="settings_theme_title">ธีม</string>
-    <string name="settings_theme_subtitle_current">เลือกว่าจะให้ Spotube แสดงผลตามระบบอย่างไร ปัจจุบัน: %1$s</string>
-    <string name="settings_theme_light">สว่าง</string>
-    <string name="settings_theme_dark">มืด</string>
-    <string name="settings_theme_system">ตามระบบ</string>
 
     <string name="settings_surface_theme_title">พื้นผิว</string>
     <string name="settings_surface_theme_subtitle_current">วัสดุพื้นหลังของแอป ปัจจุบัน: %1$s</string>
@@ -160,12 +155,12 @@
     <string name="settings_palette_title">ชุดสี</string>
     <string name="settings_palette_subtitle_current">ชุดสีเน้น Millennium ปัจจุบัน: %1$s</string>
     <string name="settings_palette_dialog_title">ชุดสี</string>
-    <string name="settings_palette_dialog_description">เลือกชุดสีเน้น Millennium และดูตัวอย่างทั้งในโหมดสว่างและมืด</string>
+    <string name="settings_palette_dialog_description">เลือกสีเน้นที่ใช้กับปุ่ม เครื่องเล่น และจุดไฮไลต์</string>
     <string name="settings_palette_label">ชุดสี</string>
     <string name="settings_appearance_subtitle_palette">ชุดสีและสีเน้น Millennium ปัจจุบัน: %1$s</string>
-    <string name="settings_palette_blue">น้ำเงิน</string>
-    <string name="settings_palette_orange">ส้ม</string>
-    <string name="settings_palette_lime">เขียวมะนาว</string>
+    <string name="settings_palette_blue">แดงสติกเกอร์</string>
+    <string name="settings_palette_orange">คราฟท์</string>
+    <string name="settings_palette_lime">เหลืองป้ายแนะนำ</string>
 
     <string name="settings_download_folder_title">กำหนดโฟลเดอร์ดาวน์โหลดเอง</string>
     <string name="settings_download_folder_current">โฟลเดอร์ปัจจุบัน: %1$s</string>
@@ -717,6 +712,7 @@
     <string name="player_collapse_content_description">ยุบเครื่องเล่น</string>
     <string name="player_expand_lyrics_content_description">ขยายเนื้อเพลง</string>
     <string name="player_now_playing">กำลังเล่น</string>
+    <string name="player_toggle_now_playing_panel">แผงกำลังเล่น</string>
     <string name="player_up_next">ถัดไปในคิว</string>
     <string name="player_up_next_empty">ไม่มีเพลงต่อจากเพลงนี้</string>
     <string name="player_view_queue">ดูคิวทั้งหมด</string>
@@ -929,4 +925,12 @@
     <string name="media_browser_featured">แนะนำ</string>
     <string name="media_browser_saved_tracks">เพลงที่บันทึกไว้</string>
     <string name="media_browser_top_tracks">เพลงยอดนิยม</string>
+    <string name="home_shelf_previous">เลื่อนกลับ</string>
+    <string name="home_shelf_next">เลื่อนต่อ</string>
+    <string name="search_recent_title">ค้นหาล่าสุด</string>
+    <string name="search_remove_recent">ลบ %1$s ออกจากการค้นหาล่าสุด</string>
+    <string name="search_idle_title">หาเพลงที่อยากฟัง</string>
+    <string name="search_idle_body">ค้นหาเพลง ศิลปิน อัลบั้ม และเพลย์ลิสต์</string>
+    <string name="featured_crate_position">แผ่นที่ %1$d จาก %2$d ในลังนี้</string>
+    <string name="featured_crate_hint">เลื่อนเมาส์หรือกดลูกศรเพื่อพลิก</string>
 </resources>

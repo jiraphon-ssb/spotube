@@ -22,7 +22,6 @@ import org.spotube.spotube.core.navigation.Routes
 import org.spotube.spotube.core.navigation.TOP_LEVEL_ROUTES
 import org.spotube.spotube.core.navigation.rememberNavigationState
 import org.spotube.spotube.core.ui.theming.SpotubeTheme
-import org.spotube.spotube.modules.settings.Theme
 import org.spotube.spotube.modules.settings.UserSettings
 import kotlin.test.Test
 import kotlin.test.assertFalse
@@ -38,7 +37,7 @@ class CompactPlayerOverlayDragTest {
         val width = 400
         val height = 800
         ImageComposeScene(width, height) {
-            SpotubeTheme(UserSettings(theme = Theme.DARK)) {
+            SpotubeTheme(UserSettings()) {
                 val navigation = rememberNavigationState(Routes.Home, TOP_LEVEL_ROUTES)
                 val navigator = remember(navigation) { Navigator(navigation) }
                 CompactPlayerOverlay(

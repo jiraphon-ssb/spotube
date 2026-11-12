@@ -44,6 +44,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -57,6 +59,9 @@ import androidx.compose.ui.unit.min
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.isActive
 import org.spotube.spotube.core.ui.theming.AppTheme
+
+/** Space under the sleeve for the display ledge it stands on. */
+private val LedgeRoom = 14.dp
 
 /** One revolution at 33⅓ rpm. */
 private const val REVOLUTION_MS = 1800
@@ -123,12 +128,24 @@ internal fun VinylArtwork(
         val disc = sleeve * 0.96f
         val travel = sleeve * 0.42f
 
-        Box(modifier = Modifier.width(sleeve + travel).height(sleeve)) {
+        Box(modifier = Modifier.width(sleeve + travel).height(sleeve + LedgeRoom)) {
+            // The counter's display ledge the sleeve stands on.
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .offset(x = (-14).dp)
+                    .width(sleeve + 28.dp)
+                    .height(14.dp)
+                    .shadow(8.dp, RoundedCornerShape(3.dp))
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(colors.kraft)
+            )
             // The record, behind the sleeve.
             Box(
                 modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(top = (sleeve - disc) / 2)
                     .size(disc)
-                    .align(Alignment.CenterStart)
                     .offset {
                         IntOffset(
                             x = ((sleeve - disc) / 2 + travel * slide.value).roundToPx(),
@@ -144,7 +161,9 @@ internal fun VinylArtwork(
             Box(
                 modifier = Modifier
                     .size(sleeve)
-                    .clip(RoundedCornerShape(8.dp))
+                    .graphicsLayer { rotationZ = -1.5f }
+                    .shadow(24.dp, RoundedCornerShape(3.dp))
+                    .clip(RoundedCornerShape(3.dp))
                     .background(colors.surfaceContainerHigh)
                     .clickable(enabled = albumId != null) { albumId?.let(onOpenAlbum) }
             ) {
@@ -168,7 +187,7 @@ internal fun VinylArtwork(
 }
 
 @Composable
-private fun VinylDisc(artwork: Any?, rotation: () -> Float) {
+internal fun VinylDisc(artwork: Any?, rotation: () -> Float) {
     Box(modifier = Modifier.fillMaxSize()) {
         // Rotating layer: vinyl, grooves, label, spindle hole.
         Box(

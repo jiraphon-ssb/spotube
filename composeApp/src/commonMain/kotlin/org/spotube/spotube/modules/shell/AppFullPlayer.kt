@@ -45,9 +45,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -64,6 +68,7 @@ import org.spotube.spotube.core.audioplayer.AudioPlayerQueue
 import org.spotube.spotube.core.navigation.NavigationCommands
 import org.spotube.spotube.core.navigation.Routes
 import org.spotube.spotube.core.ui.theming.AppTheme
+import org.spotube.spotube.core.ui.theming.rememberArtworkTint
 import org.spotube.spotube.getPlatform
 import org.spotube.spotube.modules.downloads.DownloadsViewModel
 import org.spotube.spotube.modules.lyrics.LyricsScreen
@@ -77,6 +82,9 @@ import spotube.composeapp.generated.resources.player_lyrics
 import spotube.composeapp.generated.resources.queue_title
 
 private enum class FullPlayerPane { Lyrics, Queue }
+
+/** Warm lamp light over the shop counter. */
+private val CounterLamp = Color(0xFF4A3420)
 
 /**
  * Desktop "now playing" that takes over the whole window, in the spirit of Apple Music's full
@@ -113,10 +121,32 @@ fun AppFullPlayer(
 
     PlayerOptionDialogs(viewModel = playerOptionsViewModel)
 
+    // Backdrop tinted from the artwork (Apple Music style) instead of the app accent.
+    val tint by rememberArtworkTint(player.ui.coverModel, fallback = colors.surfaceContainerHigh)
+    // The counter lamp: the cover's colour warmed toward the shop's brown.
+    // Read inside the draw lambda so the colour fade redraws instead of recomposing.
+    fun glow() = lerp(tint, CounterLamp, 0.45f)
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(colors.background)
+            // Warm accent bloom behind the record, fading out across the window.
+            .drawBehind {
+                drawRect(
+                    Brush.radialGradient(
+                        colors = listOf(glow().copy(alpha = 0.85f), Color.Transparent),
+                        center = Offset(size.width * 0.22f, size.height * 0.45f),
+                        radius = size.minDimension * 0.85f
+                    )
+                )
+                drawRect(
+                    Brush.radialGradient(
+                        colors = listOf(glow().copy(alpha = 0.45f), Color.Transparent),
+                        center = Offset(size.width * 0.85f, size.height * 0.15f),
+                        radius = size.minDimension * 0.7f
+                    )
+                )
+            }
             // Swallow clicks so nothing underneath reacts.
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -190,7 +220,7 @@ fun AppFullPlayer(
                         Spacer(Modifier.height(16.dp))
                         PlayerSeekBar(player = player)
                         Spacer(Modifier.height(16.dp))
-                        ControlDeck(player = player, height = 80.dp)
+                        TransportRow(player = player, large = true, modifier = Modifier.fillMaxWidth())
                         Spacer(Modifier.height(12.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             PlayerSecondaryActions(
@@ -220,7 +250,7 @@ fun AppFullPlayer(
                             .background(colors.surface)
                     ) {
                         when (pane) {
-                            FullPlayerPane.Lyrics -> LyricsScreen(modifier = Modifier.fillMaxSize())
+                            FullPlayerPane.Lyrics -> LyricsScreen(modifier = Modifier.fillMaxSize(), embedded = true)
                             FullPlayerPane.Queue -> PlayerQueueContent(modifier = Modifier.fillMaxSize())
                         }
                     }

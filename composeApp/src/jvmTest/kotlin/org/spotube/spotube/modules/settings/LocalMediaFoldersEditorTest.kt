@@ -166,12 +166,12 @@ class LocalMediaFoldersEditorTest {
                 )
             })
         )
-        for (theme in listOf(Theme.DARK, Theme.LIGHT)) {
+        for (theme in listOf("dark")) { // single (dark) appearance
             for (width in listOf(360, 640)) {
                 for ((name, state) in cases) {
                     var added = 0
                     ImageComposeScene(width, 660) {
-                        SpotubeTheme(UserSettings(theme = theme)) {
+                        SpotubeTheme(UserSettings()) {
                             Box(
                                 Modifier.fillMaxSize().background(MillenniumTheme.colors.background)
                             ) {

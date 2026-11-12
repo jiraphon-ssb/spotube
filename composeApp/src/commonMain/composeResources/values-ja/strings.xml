@@ -119,11 +119,6 @@
     <string name="settings_country_subtitle_current">コンテンツと利用可否に使用する国・地域。現在: %1$s</string>
     <string name="settings_option_name_and_code">%1$s (%2$s)</string>
 
-    <string name="settings_theme_title">テーマ</string>
-    <string name="settings_theme_subtitle_current">Spotubeをシステムの外観にどう合わせるかを選択します。現在: %1$s</string>
-    <string name="settings_theme_light">ライト</string>
-    <string name="settings_theme_dark">ダーク</string>
-    <string name="settings_theme_system">システム</string>
 
     <string name="settings_surface_theme_title">サーフェス</string>
     <string name="settings_surface_theme_subtitle_current">アプリの背景素材。現在: %1$s</string>

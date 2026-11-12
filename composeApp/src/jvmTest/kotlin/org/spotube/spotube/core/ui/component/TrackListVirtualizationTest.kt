@@ -30,7 +30,6 @@ import kotlinx.coroutines.launch
 import org.spotube.plugin_interfaces.plugin_apis.metadata.artist.MetadataArtist
 import org.spotube.plugin_interfaces.plugin_apis.metadata.track.MetadataTrack
 import org.spotube.spotube.core.ui.theming.SpotubeTheme
-import org.spotube.spotube.modules.settings.Theme
 import org.spotube.spotube.modules.settings.UserSettings
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -74,7 +73,7 @@ class TrackListVirtualizationTest {
 
         ImageComposeScene(1000, 800) {
             scope = rememberCoroutineScope()
-            SpotubeTheme(UserSettings(theme = Theme.DARK)) {
+            SpotubeTheme(UserSettings()) {
                 TrackList(
                     tracks = tracks,
                     hasMore = true,

@@ -121,11 +121,6 @@
     <string name="settings_country_subtitle_current">کشور منطقه برای محتوا و دسترس‌پذیری. فعلی: %1$s</string>
     <string name="settings_option_name_and_code">%1$s (%2$s)</string>
 
-    <string name="settings_theme_title">پوسته</string>
-    <string name="settings_theme_subtitle_current">انتخاب کنید Spotube چگونه با ظاهر سیستم شما هماهنگ شود. فعلی: %1$s</string>
-    <string name="settings_theme_light">روشن</string>
-    <string name="settings_theme_dark">تیره</string>
-    <string name="settings_theme_system">سیستم</string>
 
     <string name="settings_surface_theme_title">سطح</string>
     <string name="settings_surface_theme_subtitle_current">جنس پس‌زمینهٔ برنامه. فعلی: %1$s</string>

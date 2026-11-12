@@ -50,7 +50,7 @@ fun LibraryArtistsScreen(
                     )
                 }
             } else LibraryMediaCollection<MetadataArtist.Basic>(
-                items = data?.items.orEmpty(), itemKey = { it.id }, viewMode = viewMode,
+                items = data?.items.orEmpty(), itemKey = { it.id }, viewMode = viewMode, indexLabel = { it.name },
                 loading = current is LibraryArtistsState.Loading,
                 loadingMore = current is LibraryArtistsState.Data.LoadingMore,
                 onViewportChanged = viewModel::onItemsVisible,

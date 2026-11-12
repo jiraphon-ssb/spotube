@@ -18,9 +18,6 @@
 package org.spotube.spotube.core.ui.component
 
 import androidx.compose.animation.AnimatedContent
-import org.spotube.spotube.core.ui.coverflow.rememberCoverflowState
-import org.spotube.spotube.core.ui.coverflow.CoverflowParams
-import org.spotube.spotube.core.ui.coverflow.Coverflow
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.graphics.SolidColor
@@ -95,6 +92,8 @@ import org.spotube.spotube.core.ui.theming.AppTheme
 import org.spotube.spotube.resources.glyphs.Glyphs
 import spotube.composeapp.generated.resources.Res
 import spotube.composeapp.generated.resources.featured_open
+import spotube.composeapp.generated.resources.featured_crate_hint
+import spotube.composeapp.generated.resources.featured_crate_position
 import spotube.composeapp.generated.resources.featured_show_item
 import spotube.composeapp.generated.resources.media_album
 import spotube.composeapp.generated.resources.media_playlist
@@ -105,11 +104,8 @@ import spotube.composeapp.generated.resources.player_play_content_description
 import spotube.composeapp.generated.resources.player_previous_content_description
 
 /**
- * Home "featured" coverflow.
- *
- * Keeps the 3D coverflow but takes everything off the artwork: no black gradient scrim, no small
- * blurred play button, no text printed over covers. The centred item's title, artist and explicit
- * Play/Open actions sit underneath it instead, with visible arrows and a position counter.
+ * Home "featured" crate: the featured items stand in a record crate and flip forward under the
+ * mouse, the facing one described by a shelf-talker card with its play key.
  */
 @Composable
 fun FeaturedCarousel(
@@ -121,8 +117,8 @@ fun FeaturedCarousel(
         items.mapNotNull { it.toFeatured() }.distinctBy { it.key }
     }
     if (featured.isEmpty()) return
-    // The coverflow state captures its select handler once, so start fresh when the data changes.
-    key(featured) { FeaturedCoverflow(items = featured, modifier = modifier) }
+    // Start the crate fresh (first sleeve facing) when the data changes.
+    key(featured) { FeaturedCrate(items = featured, modifier = modifier) }
 }
 
 /** The bits of a browse item the spotlight shows, resolved once. */
@@ -132,7 +128,9 @@ private data class FeaturedItem(
     val title: String,
     val subtitle: String?,
     val artworkUrl: String?,
-    val kind: FeaturedKind
+    val kind: FeaturedKind,
+    /** What the shelf-talker says about it (a playlist's own description), if anything. */
+    val note: String? = null
 )
 
 private enum class FeaturedKind { Album, Playlist, Song }
@@ -152,7 +150,8 @@ private fun MetadataBrowseItem.toFeatured(): FeaturedItem? = when (this) {
         title = data.title,
         subtitle = data.owner?.displayName ?: data.owner?.username,
         artworkUrl = data.thumbnails.firstOrNull()?.url,
-        kind = FeaturedKind.Playlist
+        kind = FeaturedKind.Playlist,
+        note = data.description?.let(::plainText)?.takeIf { it.isNotBlank() }
     )
     is MetadataBrowseItem.Track -> FeaturedItem(
         source = this,
@@ -166,15 +165,23 @@ private fun MetadataBrowseItem.toFeatured(): FeaturedItem? = when (this) {
 }
 
 
+/** Plugin descriptions can carry HTML (links, entities); the talker shows plain words. */
+private fun plainText(html: String): String = html
+    .replace(Regex("<[^>]*>"), "")
+    .replace("&amp;", "&").replace("&quot;", "\"").replace("&#39;", "'")
+    .replace("&lt;", "<").replace("&gt;", ">")
+    .trim()
+
+/**
+ * Home's featured crate: sleeves standing in a crate, the facing one described by a shelf-talker
+ * (title, the playlist's own note, play). On narrow windows the talker gives way to a caption.
+ */
 @Composable
-private fun FeaturedCoverflow(items: List<FeaturedItem>, modifier: Modifier = Modifier) {
+private fun FeaturedCrate(items: List<FeaturedItem>, modifier: Modifier = Modifier) {
     val colors = AppTheme.colors
     val navigationCommands = koinInject<NavigationCommands>()
-    val startIndex = remember { items.size / 2 }
-    var selectedIndex by remember { mutableIntStateOf(startIndex) }
-    // The coverflow reports -1 while nothing is exactly centred (mid-scroll); keep the last item.
-    val state = rememberCoverflowState(startIndex) { index -> if (index >= 0) selectedIndex = index }
-    val selected = items[selectedIndex.coerceIn(0, items.lastIndex)]
+    var facingIndex by remember { mutableIntStateOf(0) }
+    val facing = items[facingIndex.coerceIn(0, items.lastIndex)]
 
     fun open(item: FeaturedItem) {
         when (val src = item.source) {
@@ -186,191 +193,88 @@ private fun FeaturedCoverflow(items: List<FeaturedItem>, modifier: Modifier = Mo
         }
     }
 
-    fun go(index: Int) {
-        if (index in items.indices) state.scrollToItem(index)
-    }
-
-    BoxWithConstraints(modifier = modifier.fillMaxWidth().padding(top = 8.dp)) {
+    BoxWithConstraints(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        val wide = maxWidth >= 860.dp
         val compact = maxWidth < 600.dp
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(if (compact) 200.dp else 280.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Coverflow(
-                    state = state,
-                    params = CoverflowParams(
-                        size = 1f,
-                        offset = 0.38f,
-                        angle = 12f,
-                        shift = 0.255f,
-                        zoom = 0.7864f,
-                        mirror = false
-                    )
-                ) {
-                    items(
-                        count = items.size,
-                        key = { index -> items[index].key }
-                    ) { index ->
-                        CoverflowCard(
-                            item = items[index],
-                            isCentered = index == selectedIndex,
-                            onClick = {
-                                if (index == selectedIndex) open(items[index]) else go(index)
-                            }
+        CrateFrame {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                CrateRow(
+                    items = items,
+                    key = { it.key },
+                    cover = { it.artworkUrl },
+                    label = { it.title },
+                    facingIndex = facingIndex,
+                    onFacingChange = { facingIndex = it },
+                    onOpen = ::open,
+                    faceSize = if (compact) 170.dp else 230.dp,
+                    modifier = Modifier.fillMaxWidth().padding(end = if (wide) 330.dp else 0.dp)
+                )
+                if (wide) {
+                    AnimatedContent(
+                        targetState = facing,
+                        transitionSpec = { fadeIn(tween(160, delayMillis = 60)) togetherWith fadeOut(tween(90)) },
+                        contentKey = { it.key },
+                        label = "shelf_talker",
+                        modifier = Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 4.dp)
+                    ) { item ->
+                        ShelfTalker(
+                            title = item.title,
+                            note = item.note,
+                            meta = listOfNotNull(
+                                stringResource(
+                                    when (item.kind) {
+                                        FeaturedKind.Album -> Res.string.media_album
+                                        FeaturedKind.Playlist -> Res.string.media_playlist
+                                        FeaturedKind.Song -> Res.string.media_song
+                                    }
+                                ),
+                                item.subtitle?.takeIf { it.isNotBlank() }
+                            ).joinToString(", "),
+                            action = { FeaturedPlayButton(item = item) }
                         )
                     }
                 }
-
-                if (!compact && items.size > 1) {
-                    CoverflowArrow(
-                        forward = false,
-                        enabled = selectedIndex > 0,
-                        onClick = { go(selectedIndex - 1) },
-                        modifier = Modifier.align(Alignment.CenterStart).padding(start = 12.dp)
-                    )
-                    CoverflowArrow(
-                        forward = true,
-                        enabled = selectedIndex < items.lastIndex,
-                        onClick = { go(selectedIndex + 1) },
-                        modifier = Modifier.align(Alignment.CenterEnd).padding(end = 12.dp)
-                    )
-                }
             }
-
-            Spacer(Modifier.height(if (compact) 10.dp else 14.dp))
-
-            // Details of the centred item, under it rather than printed over the artwork.
-            AnimatedContent(
-                targetState = selected,
-                transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(140)) },
-                contentKey = { it.key },
-                label = "featured_details"
-            ) { item ->
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+            // Where you are in the crate, and the facing sleeve's name when there's no talker.
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (!wide) {
+                    FeaturedPlayButton(item = facing)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text = facing.title,
+                            style = AppTheme.typography.titleMedium,
+                            color = colors.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        facing.subtitle?.let {
+                            Text(it, style = AppTheme.typography.bodySmall, color = colors.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                } else {
                     Text(
-                        text = stringResource(
-                            when (item.kind) {
-                                FeaturedKind.Album -> Res.string.media_album
-                                FeaturedKind.Playlist -> Res.string.media_playlist
-                                FeaturedKind.Song -> Res.string.media_song
-                            }
-                        ) + if (items.size > 1) "  ${selectedIndex + 1} / ${items.size}" else "",
-                        style = AppTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
+                        text = stringResource(Res.string.featured_crate_position, facingIndex + 1, items.size),
+                        style = AppTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
+                        color = colors.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = stringResource(Res.string.featured_crate_hint),
+                        style = AppTheme.typography.bodySmall,
                         color = colors.onSurfaceVariant
                     )
-                    Text(
-                        text = item.title,
-                        style = if (compact) AppTheme.typography.titleLarge
-                        else AppTheme.typography.headlineMedium,
-                        color = colors.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
-                    if (!item.subtitle.isNullOrBlank()) {
-                        Text(
-                            text = item.subtitle,
-                            style = AppTheme.typography.bodyMedium,
-                            color = colors.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center
-                        )
-                    }
                 }
             }
-
-            Spacer(Modifier.height(12.dp))
-
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                FeaturedPlayButton(item = selected)
-                if (selected.kind != FeaturedKind.Song ||
-                    (selected.source as? MetadataBrowseItem.Track)?.data?.album != null
-                ) {
-                    MillenniumButton(
-                        onClick = { open(selected) },
-                        style = MillenniumButtonStyle.Secondary
-                    ) {
-                        Text(stringResource(Res.string.featured_open))
-                    }
-                }
-            }
-            Spacer(Modifier.height(8.dp))
         }
     }
 }
 
 /**
- * One cover in the coverflow: artwork only. Off-centre covers are dimmed a little (less than the
- * old 50%) so depth reads without turning them into black tiles.
- */
-@Composable
-private fun CoverflowCard(item: FeaturedItem, isCentered: Boolean, onClick: () -> Unit) {
-    val colors = AppTheme.colors
-    val dim by animateFloatAsState(if (isCentered) 0f else 0.35f, tween(220), label = "cover_dim")
-    val shape = RoundedCornerShape(18.dp)
-    Box(
-        modifier = Modifier
-            .aspectRatio(1f)
-            .clip(shape)
-            .background(colors.surfaceContainerHigh)
-            .border(1.dp, Color.White.copy(alpha = 0.06f), shape)
-            .clickable(onClickLabel = item.title, onClick = onClick)
-    ) {
-        AsyncImage(
-            model = item.artworkUrl,
-            contentDescription = item.title,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
-        if (dim > 0f) {
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = dim)))
-        }
-    }
-}
-
-@Composable
-private fun CoverflowArrow(
-    forward: Boolean,
-    enabled: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val colors = AppTheme.colors
-    Box(modifier = modifier) {
-        MillenniumIconButton(
-            onClick = onClick,
-            enabled = enabled,
-            style = MillenniumIconButtonStyle.Quiet,
-            background = SolidColor(colors.surface.copy(alpha = 0.92f)),
-            shape = RoundedCornerShape(50),
-            size = DpSize(40.dp, 40.dp)
-        ) {
-            MillenniumIcon(
-                if (forward) Glyphs.ChevronRight else Glyphs.ChevronLeft,
-                contentDescription = stringResource(
-                    if (forward) Res.string.player_next_content_description
-                    else Res.string.player_previous_content_description
-                ),
-                tint = colors.onSurface,
-                size = 20.dp
-            )
-        }
-    }
-}
-
-/**
- * Accent "Play" button. If this item is what's already playing it toggles pause/resume instead
+ * Round accent play key. If this item is what's already playing it toggles pause/resume instead
  * of restarting it (the old card showed a pause icon but navigated away when tapped).
  */
 @Composable
@@ -406,12 +310,10 @@ private fun FeaturedPlayButton(
         ) in busyCollections
         else -> false
     }
-    val label = stringResource(
-        if (isPlaying) Res.string.player_pause_content_description
-        else Res.string.player_play_content_description
-    )
-
-    MillenniumButton(
+    BigPlayButton(
+        isPlaying = isPlaying,
+        loading = loading,
+        size = 40.dp,
         onClick = {
             if (isCurrent) {
                 scope.launch { if (isPlaying) audioPlayer.pause() else audioPlayer.play() }
@@ -432,19 +334,6 @@ private fun FeaturedPlayButton(
                 }
                 else -> Unit
             }
-        },
-        loading = loading,
-        style = MillenniumButtonStyle.Primary
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            MillenniumIcon(
-                if (isPlaying) Glyphs.Pause else Glyphs.Play,
-                contentDescription = null,
-                tint = AppTheme.colors.onAccentFill,
-                size = 18.dp
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(label)
         }
-    }
+    )
 }

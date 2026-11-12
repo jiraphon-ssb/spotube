@@ -105,8 +105,10 @@ fun TrackOptions(
     onAlbumClick: () -> Unit,
     modifier: Modifier = Modifier,
     isInJam: Boolean = false,
-    isJamGuest: Boolean = false) {
+    isJamGuest: Boolean = false,
+    onExpandedChange: ((Boolean) -> Unit)? = null) {
     AdaptiveDropdownBottomSheet(
+        onExpandedChange = onExpandedChange,
         items = buildTrackMenuItems(
             track = track,
             state = state,

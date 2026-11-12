@@ -120,11 +120,6 @@
     <string name="settings_country_subtitle_current">कंटेंट और उपलब्धता के लिए क्षेत्रीय देश। मौजूदा: %1$s</string>
     <string name="settings_option_name_and_code">%1$s (%2$s)</string>
 
-    <string name="settings_theme_title">थीम</string>
-    <string name="settings_theme_subtitle_current">चुनें कि Spotube आपके सिस्टम की दिखावट से कैसे मेल खाए। मौजूदा: %1$s</string>
-    <string name="settings_theme_light">लाइट</string>
-    <string name="settings_theme_dark">डार्क</string>
-    <string name="settings_theme_system">सिस्टम</string>
 
     <string name="settings_surface_theme_title">सरफ़ेस</string>
     <string name="settings_surface_theme_subtitle_current">ऐप का बैकग्राउंड मटीरियल। मौजूदा: %1$s</string>

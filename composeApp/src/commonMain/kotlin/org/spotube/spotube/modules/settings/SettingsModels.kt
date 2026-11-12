@@ -24,11 +24,6 @@ import kotlinx.serialization.Serializable
 import org.spotube.millennium.theme.MillenniumPalette
 
 @Serializable
-enum class Theme {
-    LIGHT, DARK, SYSTEM
-}
-
-@Serializable
 data class UserSettings(
     // Language and Region
     // Stored under a new name: the old "language" field was persisted as EN for everyone while
@@ -38,7 +33,6 @@ data class UserSettings(
     val country: CountryCode = CountryCode.BD,
 
     // Appearance
-    val theme: Theme = Theme.SYSTEM,
     val palette: MillenniumPalette = MillenniumPalette.Blue,
 
     // Playback
