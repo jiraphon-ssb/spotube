@@ -34,6 +34,7 @@ import org.spotube.spotube.core.remote.RemoteControlClient
 import org.spotube.spotube.core.remote.RemoteControlHandler
 import org.spotube.spotube.core.remote.RemoteControlService
 import org.spotube.spotube.core.remote.RemotePlaybackController
+import org.spotube.spotube.core.playback.NextTrackPrefetcher
 import org.spotube.spotube.core.scrobble.ScrobbleManager
 import org.spotube.spotube.core.playback.CollectionPlaybackHelper
 import org.spotube.spotube.core.server.AlternativeTracksRepository
@@ -303,6 +304,9 @@ val sharedModules = module {
 
     // Scrobbling
     single { ScrobbleManager(get(), get(), get()) } withOptions { createdAtStart() }
+
+    // Warms the next queue entry (match early, URL just before the track ends).
+    single { NextTrackPrefetcher(get(), get(), get(), get(), get()) } withOptions { createdAtStart() }
 
     factory { (tag: String?) ->
         if (tag != null) {
