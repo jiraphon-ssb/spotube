@@ -24,8 +24,12 @@ import androidx.compose.runtime.Composable
 import androidx.lifecycle.ViewModel
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlin.math.min
@@ -43,6 +47,16 @@ data class LyricsOverlayState(
 )
 
 data class CompactChromeUiState(val measuredBottomBarHeight: Dp? = null)
+
+/**
+ * A short confirmation shown above the player dock ("Added to queue", ...). [coverModel] is a
+ * Coil model for the small thumbnail; [undo], when set, adds an Undo action.
+ */
+data class ShellToast(
+    val message: String,
+    val coverModel: Any? = null,
+    val undo: (() -> Unit)? = null
+)
 
 class AppShellViewModel : ViewModel() {
     val sidebarMinWidth = 840.dp
@@ -127,12 +141,102 @@ class AppShellViewModel : ViewModel() {
         fullPlayerVisible.value = false
     }
 
-    private val nowPlayingPanelVisible = MutableStateFlow(true)
+    // --- Wide-layout overlays -----------------------------------------------------------------
 
-    /** The optional right-hand now-playing info panel (wide windows only). */
-    val isNowPlayingPanelVisible: StateFlow<Boolean> = nowPlayingPanelVisible.asStateFlow()
+    private val queueOpenFlow = MutableStateFlow(false)
+    private val soundOpenFlow = MutableStateFlow(false)
+    private val paletteOpenFlow = MutableStateFlow(false)
+    private val miniFlow = MutableStateFlow(false)
 
-    fun toggleNowPlayingPanel() {
-        nowPlayingPanelVisible.update { !it }
+    /** The queue drawer (right edge). Mutually exclusive with the sound sheet. */
+    val queueOpen: StateFlow<Boolean> = queueOpenFlow.asStateFlow()
+
+    /** The sound & EQ sheet. Mutually exclusive with the queue drawer. */
+    val soundOpen: StateFlow<Boolean> = soundOpenFlow.asStateFlow()
+
+    /** The ⌘K command palette. */
+    val paletteOpen: StateFlow<Boolean> = paletteOpenFlow.asStateFlow()
+
+    /** Mini player mode: pages fade out and the dock shrinks to a card in the corner. */
+    val mini: StateFlow<Boolean> = miniFlow.asStateFlow()
+
+    fun openQueue() {
+        soundOpenFlow.value = false
+        queueOpenFlow.value = true
     }
+
+    fun closeQueue() {
+        queueOpenFlow.value = false
+    }
+
+    fun toggleQueue() {
+        if (queueOpenFlow.value) closeQueue() else openQueue()
+    }
+
+    fun openSound() {
+        queueOpenFlow.value = false
+        soundOpenFlow.value = true
+    }
+
+    fun closeSound() {
+        soundOpenFlow.value = false
+    }
+
+    fun toggleSound() {
+        if (soundOpenFlow.value) closeSound() else openSound()
+    }
+
+    fun openPalette() {
+        paletteOpenFlow.value = true
+    }
+
+    fun closePalette() {
+        paletteOpenFlow.value = false
+    }
+
+    fun togglePalette() {
+        paletteOpenFlow.update { !it }
+    }
+
+    fun setMini(enabled: Boolean) {
+        if (enabled) {
+            // The drawer and sheet belong to the full layout; don't leave them over the card.
+            queueOpenFlow.value = false
+            soundOpenFlow.value = false
+        }
+        miniFlow.value = enabled
+    }
+
+    fun toggleMini() = setMini(!miniFlow.value)
+
+    /**
+     * Closes the topmost shell overlay, in the order palette, sound, queue, mini.
+     * Returns false when none was open (so Escape can fall through to the page).
+     */
+    fun closeTopmostOverlay(): Boolean = when {
+        paletteOpenFlow.value -> { closePalette(); true }
+        soundOpenFlow.value -> { closeSound(); true }
+        queueOpenFlow.value -> { closeQueue(); true }
+        miniFlow.value -> { setMini(false); true }
+        else -> false
+    }
+
+    // --- Toasts -------------------------------------------------------------------------------
+
+    private val toastFlow = MutableSharedFlow<ShellToast>(
+        extraBufferCapacity = 4,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+
+    /** Toasts to show. Not replayed: a toast raised while no host is listening is dropped. */
+    val toasts: SharedFlow<ShellToast> = toastFlow.asSharedFlow()
+
+    fun showToast(toast: ShellToast) {
+        toastFlow.tryEmit(toast)
+    }
+
+    // Explicit Unit: an implicit return type on an overload that calls its sibling overload can
+    // trip the compiler's recursive-type check.
+    fun showToast(message: String, coverModel: Any? = null, undo: (() -> Unit)? = null): Unit =
+        showToast(ShellToast(message, coverModel, undo))
 }

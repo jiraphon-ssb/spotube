@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- หน้าหลักในเลย์เอาต์กว้าง: หน้าแรกแบบ bento, คลังเพลง, หัวเพลย์ลิสต์แบบโปสเตอร์, กำลังเล่น -->
+<resources>
+    <string name="pages_playing">กำลังเล่น</string>
+    <string name="pages_added_to_queue">เพิ่ม “%1$s” เข้าคิวแล้ว</string>
+
+    <string name="pages_home_greeting_morning">สวัสดีตอนเช้า</string>
+    <string name="pages_home_greeting_afternoon">สวัสดีตอนบ่าย</string>
+    <string name="pages_home_greeting_evening">สวัสดีตอนเย็น</string>
+    <string name="pages_home_greeting_night">ดึกแล้ว ฟังเพลงเบาๆ กัน</string>
+    <string name="pages_home_week_hours">สัปดาห์นี้ฟังไป %1$d ชม. %2$d นาที</string>
+    <string name="pages_home_week_minutes">สัปดาห์นี้ฟังไป %1$d นาที</string>
+    <string name="pages_home_week_stats">ดูสถิติ</string>
+    <string name="pages_home_add_to_queue">เข้าคิว</string>
+    <string name="pages_home_continue_title">เล่นต่อ</string>
+    <string name="pages_home_continue_subtitle">ค้างไว้ตรงไหน ต่อตรงนั้น</string>
+    <string name="pages_home_minutes_left">เหลือ %1$d นาที</string>
+    <string name="pages_home_hours_left">เหลือ %1$d ชม. %2$d นาที</string>
+    <string name="pages_home_new">ใหม่</string>
+
+    <string name="pages_library_title">คลังเพลง</string>
+    <string name="pages_library_summary">%1$s เพลย์ลิสต์ · %2$s อัลบั้ม · %3$s ศิลปิน</string>
+    <string name="pages_library_filter_all">ทั้งหมด</string>
+    <string name="pages_library_liked_count">%1$d เพลง</string>
+    <string name="pages_library_downloads_summary">%1$d รายการ · ฟังออฟไลน์ได้</string>
+    <string name="pages_library_downloads_empty">ยังไม่มีเพลงที่ดาวน์โหลด</string>
+    <string name="pages_library_recent">ฟังล่าสุด</string>
+    <string name="pages_library_recent_summary">%1$d รายการล่าสุด</string>
+    <string name="pages_library_recent_empty">ยังไม่มีประวัติการฟัง</string>
+    <string name="pages_library_search_placeholder">ค้นหาในคลังเพลง</string>
+    <string name="pages_library_sort_label">เรียงตาม</string>
+    <string name="pages_library_sort_recent_added">เพิ่มล่าสุด</string>
+    <string name="pages_library_sort_name">ชื่อ ก–ฮ / A–Z</string>
+    <string name="pages_library_sort_creator">ผู้สร้าง</string>
+    <string name="pages_library_sort_recent_played">ฟังล่าสุด</string>
+    <string name="pages_library_col_title">ชื่อ</string>
+    <string name="pages_library_col_type">ประเภท</string>
+    <string name="pages_library_col_owner">โดย</string>
+    <string name="pages_library_col_tracks">เพลง</string>
+    <string name="pages_library_no_match">ไม่พบ “%1$s” ในคลังเพลง</string>
+    <string name="pages_library_no_match_hint">ลองไปที่หน้าค้นหาเพื่อหาจากทั้งแคตตาล็อก</string>
+    <string name="pages_library_empty">ยังไม่มีอะไรในนี้</string>
+    <string name="pages_library_default_playlist_name">เพลย์ลิสต์ของฉัน</string>
+    <string name="pages_library_cover_colour">สีปก</string>
+    <string name="pages_library_cover_colour_option">สีที่ %1$d</string>
+    <string name="pages_library_created">สร้าง “%1$s” แล้ว</string>
+    <string name="pages_library_create_failed">สร้างเพลย์ลิสต์ไม่สำเร็จ ลองเช็กอินเทอร์เน็ตแล้วลองอีกครั้ง</string>
+
+    <string name="pages_collection_tracks">%1$d เพลง</string>
+    <string name="pages_collection_duration_hours">ประมาณ %1$d ชม. %2$d นาที</string>
+    <string name="pages_collection_duration_minutes">%1$d นาที</string>
+    <string name="pages_collection_add_all_to_queue">เข้าคิวทั้งหมด</string>
+
+    <string name="pages_now_translation">แสดงคำแปล</string>
+    <string name="pages_now_soon">เร็วๆ นี้</string>
+    <string name="pages_now_sound">เสียง &amp; EQ</string>
+    <string name="pages_now_skip_hint">คลิกเพื่อข้ามไปเพลงถัดไป</string>
+</resources>

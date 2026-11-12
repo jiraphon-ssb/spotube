@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,11 +45,14 @@ import org.spotube.spotube.core.navigation.navPushTransitionSpec
 import org.spotube.spotube.core.navigation.rememberNavigationState
 import org.spotube.spotube.core.navigation.toEntries
 import org.spotube.spotube.core.ui.component.LocalSharedTransitionScope
+import org.spotube.spotube.core.ui.theming.LocalReduceMotion
 import org.spotube.spotube.core.ui.theming.SpotubeTheme
 import org.spotube.spotube.modules.library.LibraryTab
 import org.spotube.spotube.modules.settings.SettingsRepository
 import org.spotube.spotube.modules.settings.UserSettings
 import org.spotube.spotube.modules.shell.AppShell
+import org.spotube.spotube.modules.shell.LocalRoomLight
+import org.spotube.spotube.modules.shell.RoomLightController
 import org.spotube.spotube.modules.support.LocalSupportPrompt
 import org.spotube.spotube.modules.support.SupportDialog
 import org.spotube.spotube.modules.support.SupportReminderIntervalMillis
@@ -216,10 +220,18 @@ fun App(
     // Below the navigation state, so switching languages keeps the current screen.
     AppLocaleProvider(userSettings.language) {
         SpotubeTheme(settings = userSettings) {
-            CompositionLocalProvider(LocalSupportPrompt provides {
-                supportDialogIsReminder = false
-                showSupportDialog = true
-            }) {
+            // Settings-driven shell switches: the room light (the shell reads LocalRoomLight) and
+            // reduced motion for everything below.
+            val roomLight = remember { RoomLightController() }
+            SideEffect { roomLight.enabled = userSettings.roomLightEnabled }
+            CompositionLocalProvider(
+                LocalSupportPrompt provides {
+                    supportDialogIsReminder = false
+                    showSupportDialog = true
+                },
+                LocalReduceMotion provides userSettings.reduceMotion,
+                LocalRoomLight provides roomLight
+            ) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     val currentRoute =
                         navigationState.backStacks[navigationState.topLevelRoute]?.last()

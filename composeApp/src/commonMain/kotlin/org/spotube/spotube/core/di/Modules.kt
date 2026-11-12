@@ -27,6 +27,9 @@ import org.spotube.spotube.core.audioplayer.QueueStateRepository
 import org.spotube.spotube.core.db.Database
 import org.spotube.spotube.core.discovery.DeviceDiscoveryService
 import org.spotube.spotube.core.discord.DiscordRpcService
+import org.spotube.spotube.core.history.ListeningHistoryRecorder
+import org.spotube.spotube.core.history.ListeningHistoryRepository
+import org.spotube.spotube.core.history.LocalListeningHistoryRepository
 import org.spotube.spotube.core.jam.JamRoomClient
 import org.spotube.spotube.core.jam.JamRoomService
 import org.spotube.spotube.core.navigation.navigationModule
@@ -93,6 +96,7 @@ import org.spotube.spotube.modules.settings.SettingsViewModel
 import org.spotube.spotube.modules.settings.JamSettingsViewModel
 import org.spotube.spotube.modules.settings.LocalMediaFoldersViewModel
 import org.spotube.spotube.modules.shell.AppShellViewModel
+import org.spotube.spotube.modules.stats.StatsViewModel
 import org.spotube.spotube.modules.shell.PlayerOptionsViewModel
 import org.spotube.spotube.modules.shell.alternative_track.AlternativeTrackContentViewModel
 import org.spotube.spotube.modules.shell.player_queue.PlayerQueueContentViewModel
@@ -307,6 +311,20 @@ val sharedModules = module {
 
     // Warms the next queue entry (match early, URL just before the track ends).
     single { NextTrackPrefetcher(get(), get(), get(), get(), get()) } withOptions { createdAtStart() }
+
+    // Listening history (Stats screen, Home "Continue" + week chip). The recorder watches the
+    // player from app start and writes sessions to the repository.
+    single { LocalListeningHistoryRepository(get()) }
+    single<ListeningHistoryRepository> { get<LocalListeningHistoryRepository>() }
+    single {
+        ListeningHistoryRecorder(
+            audioPlayer = get(),
+            audioPlayerQueue = get(),
+            repository = get(),
+            playlistRepository = get(),
+            albumRepository = get())
+    } withOptions { createdAtStart() }
+    viewModelOf(::StatsViewModel)
 
     factory { (tag: String?) ->
         if (tag != null) {

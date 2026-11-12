@@ -20,7 +20,6 @@ package org.spotube.spotube.modules.devices
 
 import org.spotube.millennium.composables.MillenniumButton
 import org.spotube.millennium.composables.MillenniumButtonStyle
-import org.spotube.millennium.composables.MillenniumCard
 import org.spotube.millennium.composables.MillenniumDropdownMenu
 import org.spotube.millennium.composables.MillenniumDropdownMenuItem
 import org.spotube.millennium.composables.MillenniumIcon
@@ -77,6 +76,12 @@ import coil3.compose.AsyncImage
 import org.spotube.spotube.core.remote.ConnectionState
 import org.spotube.spotube.core.ui.component.ApplicationMainBar
 import org.spotube.spotube.modules.shell.LocalAppShellBottomInset
+import org.spotube.spotube.modules.settings.components.GlassButton
+import org.spotube.spotube.modules.settings.components.GlassGroupShape
+import org.spotube.spotube.modules.settings.components.GlassPageHeader
+import org.spotube.spotube.modules.settings.components.glassSurface
+import org.spotube.spotube.modules.settings.components.isWideShellLayout
+import org.spotube.spotube.modules.shell.LocalAppShellTopInset
 import org.spotube.spotube.modules.shell.player_queue.QueueSheet
 import org.spotube.spotube.resources.iconsax.Iconsax
 import org.spotube.spotube.resources.iconsax.Iconsax3DotsMore
@@ -148,15 +153,55 @@ fun RemoteControlScreen(
     val shellBottomInset = LocalAppShellBottomInset.current
     val isConnected = state.connection is ConnectionState.Connected
 
+    val wideShell = isWideShellLayout()
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .background(MillenniumTheme.colors.background)
+            // The wide shell draws the room light behind pages; only the compact one needs a canvas.
+            .then(if (wideShell) Modifier else Modifier.background(MillenniumTheme.colors.background))
     ) {
         val isWide = maxWidth >= WideLayoutMinWidth
 
-        Column(modifier = Modifier.fillMaxSize()) {
-            ApplicationMainBar(
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = LocalAppShellTopInset.current)
+        ) {
+            if (wideShell) {
+                GlassPageHeader(
+                    title = stringResource(Res.string.devices_remote_title),
+                    subtitle = state.deviceName
+                        .takeIf { isConnected && it.isNotBlank() }
+                        ?.let { stringResource(Res.string.devices_remote_playing_on, it) },
+                    modifier = Modifier.padding(horizontal = 24.dp)
+                ) {
+                    if (isConnected && !isWide) {
+                        MillenniumIconButton(
+                            onClick = viewModel::toggleQueueVisibility,
+                            style = MillenniumIconButtonStyle.Quiet
+                        ) {
+                            MillenniumIcon(
+                                imageVector = Iconsax.IconsaxMusicFilter,
+                                contentDescription = stringResource(Res.string.queue_title),
+                                tint = if (state.isQueueVisible) {
+                                    AppTheme.colors.primary
+                                } else {
+                                    AppTheme.colors.onSurfaceVariant
+                                }
+                            )
+                        }
+                    }
+                    if (isConnected) {
+                        GlassButton(
+                            text = stringResource(Res.string.devices_disconnect),
+                            onClick = {
+                                viewModel.disconnect()
+                                onDisconnect()
+                            }
+                        )
+                    }
+                }
+            } else ApplicationMainBar(
                 title = { Text(stringResource(Res.string.devices_remote_title)) },
                 subtitle = {
                     if (isConnected && state.deviceName.isNotBlank()) {
@@ -220,13 +265,12 @@ fun RemoteControlScreen(
                                         .weight(1f)
                                         .fillMaxHeight()
                                 )
-                                MillenniumCard(
+                                Box(
                                     modifier = Modifier
                                         .width(QueuePanelWidth)
-                                        .fillMaxHeight(),
-                                    maxWidth = QueuePanelWidth,
-                                    contentPadding = PaddingValues(12.dp),
-                                    shadowElevation = 2.dp
+                                        .fillMaxHeight()
+                                        .glassSurface(AppTheme.colors, GlassGroupShape)
+                                        .padding(12.dp)
                                 ) {
                                     RemoteQueueList(
                                         state = state,

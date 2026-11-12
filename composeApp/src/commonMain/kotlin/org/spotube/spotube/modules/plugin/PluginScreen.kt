@@ -85,6 +85,10 @@ import org.spotube.spotube.core.ui.component.AdaptiveDialogBottomSheet
 import org.spotube.spotube.core.ui.component.AdaptiveDropdownBottomSheet
 import org.spotube.spotube.core.ui.component.AdaptiveMenuItem
 import org.spotube.spotube.core.ui.component.ApplicationMainBar
+import org.spotube.spotube.modules.settings.components.GlassPageHeader
+import org.spotube.spotube.modules.settings.components.isWideShellLayout
+import org.spotube.spotube.modules.shell.LocalAppShellTopInset
+import spotube.composeapp.generated.resources.plugins_glass_subtitle
 import org.spotube.spotube.core.ui.component.HeaderDisplayMode
 import org.spotube.spotube.getPlatform
 import org.spotube.spotube.modules.plugin.components.DefaultAbilityPluginList
@@ -170,8 +174,26 @@ import spotube.composeapp.generated.resources.settings_plugins_plugin_content_de
 fun PluginScreen(
     viewModel: PluginViewModel = koinViewModel(),
     onboarding: Boolean = false) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        if (!onboarding) {
+    val wide = !onboarding && isWideShellLayout()
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = if (onboarding) 0.dp else LocalAppShellTopInset.current)
+    ) {
+        if (wide) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                GlassPageHeader(
+                    title = stringResource(Res.string.plugin_screen_title),
+                    subtitle = stringResource(Res.string.plugins_glass_subtitle),
+                    modifier = Modifier.widthIn(max = 1240.dp)
+                )
+            }
+        } else if (!onboarding) {
             ApplicationMainBar(title = { Text(stringResource(Res.string.plugin_screen_title)) })
         }
         PluginScreenContent(

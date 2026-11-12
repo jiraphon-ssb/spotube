@@ -152,6 +152,15 @@ class SearchScreenViewModel(
         }
     }
 
+    /** Re-runs the current query for the selected tab; error states call this. */
+    fun retry() {
+        if (_state.value.query.isBlank()) return
+        queryJob?.cancel()
+        queryJob = viewModelScope.launch {
+            refreshCurrentSelection(reset = true)
+        }
+    }
+
     fun clearQuery() {
         queryJob?.cancel()
         _state.value = _state.value.copy(

@@ -33,7 +33,16 @@ data class UserSettings(
     val country: CountryCode = CountryCode.BD,
 
     // Appearance
+    /** Fixed accent (Ice / Aqua / Silver). Also the fallback while [followSongAccent] is on. */
     val palette: MillenniumPalette = MillenniumPalette.Blue,
+    /** Accent takes its colour from the playing cover ("Follow song"). */
+    // TODO(phase-d): SpotubeTheme still uses [palette] only; derive the accent from the playing
+    //  cover (contrast-checked) in the shell while this is on.
+    val followSongAccent: Boolean = true,
+    /** Window-wide light tinted from the playing cover (wide layout). */
+    val roomLightEnabled: Boolean = true,
+    /** Stops ambient motion (drifting room light, spinning cover, sliding lyrics). */
+    val reduceMotion: Boolean = false,
 
     // Playback
     val streamingMusicFormat: AudioFormat = defaultStreamingMusicFormat(),

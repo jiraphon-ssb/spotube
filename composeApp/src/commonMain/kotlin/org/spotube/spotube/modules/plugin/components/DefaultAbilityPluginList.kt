@@ -68,10 +68,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -115,16 +111,6 @@ internal fun PluginAbility.abilityIcon(): ImageVector = when (this) {
     PluginAbility.AUDIO -> Iconsax.IconsaxMusic
     PluginAbility.LYRICS -> Iconsax.IconsaxTextalignLeft
     PluginAbility.SCROBBLE -> Iconsax.IconsaxSound
-}
-
-/**
- * A vibrant, multi-hue gradient per ability, used by the Frutiger-Aero plugin tiles.
- */
-internal fun PluginAbility.aeroGradient(): List<Color> = when (this) {
-    PluginAbility.METADATA -> listOf(Color(0xFFA8E063), Color(0xFF56AB2F), Color(0xFF11998E))
-    PluginAbility.AUDIO -> listOf(Color(0xFF56CCF2), Color(0xFF2F80ED), Color(0xFF6A11CB))
-    PluginAbility.LYRICS -> listOf(Color(0xFFFFE259), Color(0xFFFFA751), Color(0xFFFF5E62))
-    PluginAbility.SCROBBLE -> listOf(Color(0xFFFF6FD8), Color(0xFF9D50BB), Color(0xFF3F0D7A))
 }
 
 @Composable
@@ -210,7 +196,7 @@ private fun DefaultAbilityPluginRow(
                                             imageVector = ability.abilityIcon(),
                                             contentDescription = null,
                                             modifier = Modifier.size(18.dp),
-                                            tint = ability.accentColor())
+                                            tint = AppTheme.colors.onSurfaceVariant)
                                     })
                             }
                         },
@@ -368,7 +354,7 @@ private fun SelectedPluginChip(
                             imageVector = ability.abilityIcon(),
                             contentDescription = null,
                             modifier = Modifier.size(12.dp),
-                            tint = ability.accentColor())
+                            tint = AppTheme.colors.onSurfaceVariant)
                     })
             }
         }
@@ -382,36 +368,18 @@ private fun SelectedPluginChip(
     }
 }
 
-/** A glossy rounded square in the ability's colors, like a 2007 app icon. */
+/** A flat neutral tile holding the ability's glyph: no gradient, gloss or coloured shadow. */
 @Composable
 internal fun AbilityIconTile(ability: PluginAbility, size: Dp) {
-    val gradient = ability.aeroGradient()
-    val shape = RoundedCornerShape(size / 3.6f)
     Box(
         modifier = Modifier
             .size(size)
-            .shadow(2.dp, shape, ambientColor = gradient.last(), spotColor = gradient.last())
-            .clip(shape)
-            .drawWithCache {
-                val background = Brush.linearGradient(
-                    colors = gradient,
-                    start = Offset.Zero,
-                    end = Offset(this.size.width, this.size.height))
-                val gloss = Brush.verticalGradient(
-                    0f to Color.White.copy(alpha = 0.5f),
-                    0.48f to Color.White.copy(alpha = 0.15f),
-                    0.5f to Color.Transparent)
-                onDrawBehind {
-                    drawRect(background)
-                    drawRect(gloss)
-                }
-            }
-            .border(1.dp, Color.White.copy(alpha = 0.4f), shape),
+            .background(AppTheme.colors.surfaceContainerHigh, RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center) {
         MillenniumIcon(
             imageVector = ability.abilityIcon(),
             contentDescription = null,
             modifier = Modifier.size(size * 0.5f),
-            tint = Color.White)
+            tint = AppTheme.colors.onSurfaceVariant)
     }
 }

@@ -3,7 +3,6 @@
  */
 package org.spotube.spotube.modules.downloads
 
-import org.spotube.millennium.composables.MillenniumStripedProgress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +30,13 @@ import org.spotube.spotube.core.ui.component.cards.MediaEmptyState
 import org.spotube.spotube.core.ui.component.ApplicationMainBar
 import org.spotube.spotube.core.ui.theming.AppTheme
 import org.spotube.spotube.modules.shell.LocalAppShellBottomInset
+import org.spotube.spotube.modules.settings.components.GlassButton
+import org.spotube.spotube.modules.settings.components.GlassListCard
+import org.spotube.spotube.modules.settings.components.GlassPageHeader
+import org.spotube.spotube.modules.settings.components.GlassProgressBar
+import org.spotube.spotube.modules.settings.components.GlassStatusPill
+import org.spotube.spotube.modules.settings.components.isWideShellLayout
+import org.spotube.spotube.modules.shell.LocalAppShellTopInset
 import org.spotube.spotube.resources.iconsax.Iconsax
 import org.spotube.spotube.resources.iconsax.IconsaxDirectboxReceive
 import org.spotube.spotube.resources.iconsax.IconsaxCloseSquare
@@ -44,8 +50,6 @@ import org.spotube.millennium.composables.MillenniumIcon
 import org.spotube.millennium.composables.MillenniumIconButton
 import org.spotube.millennium.composables.MillenniumIconButtonStyle
 import org.spotube.millennium.theme.MillenniumTheme
-import org.spotube.millennium.theme.millenniumPanelBrush
-import org.spotube.millennium.theme.millenniumSurface
 import spotube.composeapp.generated.resources.*
 
 @Composable
@@ -56,8 +60,29 @@ fun DownloadsScreen(
     topContent: @Composable () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    Column(modifier.fillMaxSize()) {
-        if (headerInAppBar) {
+    val wide = isWideShellLayout()
+    Column(
+        modifier
+            .fillMaxSize()
+            .then(if (headerInAppBar) Modifier.padding(top = LocalAppShellTopInset.current) else Modifier)
+    ) {
+        if (headerInAppBar && wide) {
+            Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp), contentAlignment = Alignment.TopCenter) {
+                GlassPageHeader(
+                    title = stringResource(Res.string.library_tab_downloads),
+                    subtitle = downloadsSubtitle(state),
+                    modifier = Modifier.widthIn(max = 960.dp)
+                ) {
+                    if (state.canClearCompleted) {
+                        GlassButton(
+                            text = stringResource(Res.string.downloads_clear_completed),
+                            onClick = viewModel::clearCompleted
+                        )
+                    }
+                }
+            }
+            topContent()
+        } else if (headerInAppBar) {
             ApplicationMainBar(
                 backButton = false,
                 title = { DownloadsToolbarTitle() },
@@ -78,6 +103,15 @@ fun DownloadsScreen(
         )
     }
 }
+
+/** "N downloading · M done · Saved to …" for the glass page header. */
+@Composable
+private fun downloadsSubtitle(state: DownloadsUiState): String? = listOfNotNull(
+    if (state.items.isNotEmpty()) {
+        stringResource(Res.string.downloads_summary, state.activeCount, state.completedCount)
+    } else null,
+    if (state.folder.isNotBlank()) stringResource(Res.string.downloads_saved_to, state.folder) else null
+).joinToString(" · ").ifBlank { null }
 
 @Composable
 internal fun DownloadsToolbarTitle() {
@@ -183,77 +217,70 @@ internal fun DownloadListRow(
     onRetry: () -> Unit,
     onRemove: () -> Unit
 ) {
-    val colors = MillenniumTheme.colors
-    Row(
-        Modifier.fillMaxWidth().millenniumSurface(
-            background = millenniumPanelBrush(colors),
-            shape = RoundedCornerShape(8.dp),
-            borderColor = colors.border,
-            borderWidth = 1.dp,
-            innerGlowColor = colors.highlight.copy(alpha = 0.2f)
-        ).padding(12.dp), verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        MediaArtwork(item.artworkUrl, item.title, Modifier.size(52.dp))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                item.title,
-                style = AppTheme.typography.titleSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                item.artists,
-                style = AppTheme.typography.bodySmall,
-                color = AppTheme.colors.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                when (item.status) {
-                    DownloadStatus.Downloading -> stringResource(
-                        Res.string.downloads_status_downloading,
-                        item.percent
-                    )
+    val colors = AppTheme.colors
+    val completed = item.status == DownloadStatus.Completed
+    GlassListCard(
+        title = item.title,
+        subtitle = item.artists,
+        leading = {
+            MediaArtwork(item.artworkUrl, item.title, Modifier.size(52.dp), shape = RoundedCornerShape(10.dp))
+        },
+        below = {
+            // Completed rows say it with the pill instead.
+            if (!completed) {
+                Text(
+                    when (item.status) {
+                        DownloadStatus.Downloading -> stringResource(
+                            Res.string.downloads_status_downloading,
+                            item.percent
+                        )
 
-                    DownloadStatus.Queued -> stringResource(Res.string.downloads_status_queued)
-                    DownloadStatus.Completed -> stringResource(Res.string.downloads_status_completed)
-                    DownloadStatus.Cancelled -> stringResource(Res.string.downloads_status_cancelled)
-                    is DownloadStatus.Failed -> if (item.error != null) stringResource(
-                        Res.string.downloads_status_failed_error,
-                        item.error
-                    ) else stringResource(Res.string.downloads_status_failed)
-                },
-                style = AppTheme.typography.labelSmall,
-                color = when (item.status) {
-                    is DownloadStatus.Failed -> AppTheme.colors.error
-                    DownloadStatus.Completed -> AppTheme.colors.primary
-                    else -> AppTheme.colors.onSurfaceVariant
-                },
-                maxLines = 1, overflow = TextOverflow.Ellipsis
-            )
-            if (item.status == DownloadStatus.Downloading) MillenniumStripedProgress(
-                progress = item.progress,
-                modifier = Modifier.fillMaxWidth(),
-                height = 6.dp
-            )
-        }
-        MillenniumIconButton(
-            onClick = when (item.action) {
-                DownloadRowAction.Cancel -> onCancel; DownloadRowAction.Retry -> onRetry; DownloadRowAction.Remove -> onRemove
-            },
-            modifier = Modifier.size(40.dp), style = MillenniumIconButtonStyle.Secondary
-        ) {
-            MillenniumIcon(
-                when (item.action) {
-                    DownloadRowAction.Cancel -> Iconsax.IconsaxCloseSquare; DownloadRowAction.Retry -> Iconsax.IconsaxRefreshRight; DownloadRowAction.Remove -> Iconsax.IconsaxTrash
-                },
-                stringResource(
-                    when (item.action) {
-                        DownloadRowAction.Cancel -> Res.string.downloads_action_cancel; DownloadRowAction.Retry -> Res.string.downloads_action_retry; DownloadRowAction.Remove -> Res.string.downloads_action_remove
-                    }
+                        DownloadStatus.Queued -> stringResource(Res.string.downloads_status_queued)
+                        DownloadStatus.Completed -> stringResource(Res.string.downloads_status_completed)
+                        DownloadStatus.Cancelled -> stringResource(Res.string.downloads_status_cancelled)
+                        is DownloadStatus.Failed -> if (item.error != null) stringResource(
+                            Res.string.downloads_status_failed_error,
+                            item.error
+                        ) else stringResource(Res.string.downloads_status_failed)
+                    },
+                    style = AppTheme.typography.labelSmall,
+                    color = when (item.status) {
+                        is DownloadStatus.Failed -> colors.error
+                        else -> colors.onSurfaceVariant
+                    },
+                    maxLines = 1, overflow = TextOverflow.Ellipsis
                 )
-            )
+            }
+            if (item.status == DownloadStatus.Downloading) {
+                GlassProgressBar(progress = item.progress, modifier = Modifier.padding(top = 8.dp))
+            }
+        },
+        trailing = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (completed) {
+                    GlassStatusPill(stringResource(Res.string.downloads_ready_offline))
+                }
+                MillenniumIconButton(
+                    onClick = when (item.action) {
+                        DownloadRowAction.Cancel -> onCancel; DownloadRowAction.Retry -> onRetry; DownloadRowAction.Remove -> onRemove
+                    },
+                    modifier = Modifier.size(36.dp), style = MillenniumIconButtonStyle.Quiet
+                ) {
+                    MillenniumIcon(
+                        when (item.action) {
+                            DownloadRowAction.Cancel -> Iconsax.IconsaxCloseSquare; DownloadRowAction.Retry -> Iconsax.IconsaxRefreshRight; DownloadRowAction.Remove -> Iconsax.IconsaxTrash
+                        },
+                        stringResource(
+                            when (item.action) {
+                                DownloadRowAction.Cancel -> Res.string.downloads_action_cancel; DownloadRowAction.Retry -> Res.string.downloads_action_retry; DownloadRowAction.Remove -> Res.string.downloads_action_remove
+                            }
+                        )
+                    )
+                }
+            }
         }
-    }
+    )
 }

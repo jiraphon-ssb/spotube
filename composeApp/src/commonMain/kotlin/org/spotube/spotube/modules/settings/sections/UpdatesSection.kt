@@ -33,10 +33,8 @@ internal fun LazyListScope.updatesSection(
     settings: UserSettings,
     settingsViewModel: SettingsViewModel,
     includeHeader: Boolean = true) {
-    if (includeHeader) {
-        settingsSectionHeader(Res.string.settings_section_updates)
-    }
     settingsSectionCard(
+        title = if (includeHeader) Res.string.settings_section_updates else null,
         items = listOf {
             SwitchSettingCard(
                 title = stringResource(Res.string.settings_updates_auto_check_title),

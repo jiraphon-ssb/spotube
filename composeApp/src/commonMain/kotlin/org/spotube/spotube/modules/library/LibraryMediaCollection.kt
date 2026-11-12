@@ -33,7 +33,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
-import org.spotube.spotube.core.ui.component.DividerTabs
+import org.spotube.spotube.core.ui.component.PillChipRow
 import org.spotube.spotube.core.ui.theming.AppTheme
 import org.spotube.spotube.core.ui.misc.SkeletonTree
 import org.spotube.spotube.modules.shell.LocalAppShellBottomInset
@@ -136,8 +136,8 @@ private fun indexOrder(letter: String): Pair<Int, String> = when {
 }
 
 /**
- * The library's divider cards: one kraft tab per starting letter present. Clicking a tab jumps
- * to its first item; the tab of the first visible item stands up as you scroll.
+ * The library's A–Z index: one chip per starting letter present. Clicking a chip jumps to its
+ * first item; the chip of the first visible item is selected as you scroll.
  */
 @Composable
 private fun <T> LibraryIndexDividers(
@@ -154,21 +154,14 @@ private fun <T> LibraryIndexDividers(
             letters.getOrNull(gridState.firstVisibleItemIndex - headerOffset)?.let(tabs::indexOf) ?: -1
         }
     }
-    Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp)) {
-        DividerTabs(
-            labels = tabs,
-            selectedIndex = current,
-            onSelect = { tab ->
-                val first = letters.indexOf(tabs[tab])
-                if (first >= 0) scope.launch { gridState.animateScrollToItem(first + headerOffset) }
-            },
-            modifier = Modifier.padding(start = 12.dp)
-        )
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(3.dp)
-                .background(AppTheme.colors.kraft, RoundedCornerShape(2.dp))
-        )
-    }
+    PillChipRow(
+        labels = tabs,
+        selectedIndex = current,
+        onSelect = { tab ->
+            val first = letters.indexOf(tabs[tab])
+            if (first >= 0) scope.launch { gridState.animateScrollToItem(first + headerOffset) }
+        },
+        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp)
+    )
 }

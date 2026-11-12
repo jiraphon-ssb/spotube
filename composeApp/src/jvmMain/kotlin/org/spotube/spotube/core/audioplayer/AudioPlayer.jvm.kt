@@ -37,6 +37,7 @@ import org.koin.core.component.KoinComponent
 import org.spotube.spotube.core.DebugConfig
 import uk.co.caprica.vlcj.factory.MediaPlayerFactory
 import uk.co.caprica.vlcj.factory.discovery.NativeDiscovery
+import uk.co.caprica.vlcj.player.base.Equalizer
 import uk.co.caprica.vlcj.medialist.MediaList
 import uk.co.caprica.vlcj.player.base.MediaPlayer
 import uk.co.caprica.vlcj.player.base.State
@@ -44,6 +45,9 @@ import uk.co.caprica.vlcj.player.component.AudioListPlayerComponent
 import uk.co.caprica.vlcj.player.list.MediaListPlayer
 import uk.co.caprica.vlcj.player.list.PlaybackMode
 import java.util.concurrent.locks.ReentrantLock
+import org.spotube.spotube.core.paths.Paths
+import java.io.File
+import java.util.Properties
 import kotlin.concurrent.withLock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -73,6 +77,23 @@ actual class AudioPlayer actual constructor(context: Any) : AudioPlayerInterface
     private var disposed = false
     private var hasStartedPlayback = false
     private var positionPollingJob: Job? = null
+
+    /**
+     * Engine-level sound options (EQ, output device, normalization), kept in a small file so they
+     * are back the moment the player is created, before any UI runs. `null` if the data folder
+     * can't be resolved; then the options are session-only.
+     */
+    private val engineStore: EngineSoundStore? = runCatching {
+        EngineSoundStore(File(Paths().getApplicationDataDirPath(), ENGINE_STORE_FILE))
+    }.getOrNull()
+    private var engineStoreSaveJob: Job? = null
+
+    /** The libVLC equalizer, created the first time a non-null EQ is applied. */
+    private var equalizer: Equalizer? = null
+
+    /** Whether this player instance was created with the `normvol` audio filter. */
+    private val normalizationActive: Boolean =
+        engineStore?.get(PREF_NORMALIZATION)?.toBooleanStrictOrNull() == true
 
     private val _playerState = MutableStateFlow(PlayerState.IDLE)
     private val _currentMediaItem = MutableStateFlow<MediaItem?>(null)
@@ -105,6 +126,9 @@ actual class AudioPlayer actual constructor(context: Any) : AudioPlayerInterface
     init {
         VLCBundleLoaderGenerated.getVerifiedPath()
         val vlcLogArgs = if (DebugConfig.FORCE_VLC_LOGS) arrayOf("--verbose=2") else emptyArray()
+        // VLC only reads the audio filter chain when the instance is created, so normalization
+        // is decided here (see setVolumeNormalization).
+        val filterArgs = if (normalizationActive) arrayOf("--audio-filter=normvol") else emptyArray()
         mediaPlayerFactory = MediaPlayerFactory(
             null as NativeDiscovery?,
             "--no-video",
@@ -112,6 +136,7 @@ actual class AudioPlayer actual constructor(context: Any) : AudioPlayerInterface
             "--aout=any",
             "--no-osd",
             "--no-snapshot-preview",
+            *filterArgs,
             *vlcLogArgs
         )
         audioListPlayerComponent = object : AudioListPlayerComponent(mediaPlayerFactory) {
@@ -241,6 +266,7 @@ actual class AudioPlayer actual constructor(context: Any) : AudioPlayerInterface
         mediaList = mediaPlayerFactory.media().newMediaList()
 
         mediaListPlayer.list().setMediaList(mediaList.newMediaListRef())
+        restoreEngineOptions()
         startPositionPolling()
     }
 
@@ -524,6 +550,139 @@ actual class AudioPlayer actual constructor(context: Any) : AudioPlayerInterface
         }
     }
 
+    // --- Sound options ------------------------------------------------------------------------
+
+    override val supportsEqualizer: Boolean get() = true
+
+    override suspend fun setEqualizer(bandsDb: List<Float>?, preampDb: Float) {
+        lock.withLock {
+            if (disposed) return
+            applyEqualizerLocked(bandsDb, preampDb)
+        }
+        engineStore?.let { store ->
+            store.put(PREF_EQ_BANDS, bandsDb?.joinToString(","))
+            store.put(PREF_EQ_PREAMP, if (bandsDb == null) null else preampDb.toString())
+            saveEngineStoreLater()
+        }
+    }
+
+    override val supportsOutputDevices: Boolean get() = true
+
+    override suspend fun outputDevices(): List<AudioOutputDevice> {
+        lock.withLock {
+            if (disposed) return emptyList()
+            return runCatching {
+                mediaPlayer.audio().outputDevices().mapNotNull { device ->
+                    val id: String? = device.deviceId
+                    if (id.isNullOrBlank()) {
+                        null
+                    } else {
+                        val name: String? = device.longName
+                        AudioOutputDevice(id = id, name = if (name.isNullOrBlank()) id else name)
+                    }
+                }
+            }.onFailure { logger.w(it) { "Failed to list audio output devices" } }
+                .getOrDefault(emptyList())
+        }
+    }
+
+    override suspend fun currentOutputDevice(): String? {
+        lock.withLock {
+            if (disposed) return null
+            return runCatching<String?> { mediaPlayer.audio().outputDevice() }.getOrNull()
+        }
+    }
+
+    override suspend fun setOutputDevice(id: String?) {
+        if (id == null) return
+        lock.withLock {
+            if (disposed) return
+            applyOutputDeviceLocked(id)
+        }
+        engineStore?.let { store ->
+            store.put(PREF_OUTPUT_DEVICE, id)
+            saveEngineStoreLater()
+        }
+    }
+
+    override val supportsVolumeNormalization: Boolean get() = true
+
+    /**
+     * Stores the choice for the next start. Recreating the VLC instance mid-session would drop
+     * the playlist and playback position, so the running player keeps its current filter chain.
+     */
+    override suspend fun setVolumeNormalization(enabled: Boolean) {
+        engineStore?.let { store ->
+            store.put(PREF_NORMALIZATION, enabled.toString())
+            saveEngineStoreLater()
+        }
+        if (enabled != normalizationActive) {
+            logger.d { "Volume normalization set to $enabled; applies after restart" }
+        }
+    }
+
+    /**
+     * libVLC applies the EQ as an audio filter. Detaching it (`setEqualizer(null)`) rewrites the
+     * player's filter chain, which would also drop `normvol`, so once attached an EQ is flattened
+     * rather than removed.
+     */
+    private fun applyEqualizerLocked(bandsDb: List<Float>?, preampDb: Float) {
+        runCatching {
+            val existing = equalizer
+            if (bandsDb == null) {
+                if (existing != null) {
+                    existing.setPreamp(0f)
+                    for (band in 0 until existing.bandCount()) existing.setAmp(band, 0f)
+                }
+            } else {
+                val eq = existing ?: mediaPlayerFactory.equalizer().newEqualizer()
+                eq.setPreamp(preampDb.coerceIn(-VLC_EQ_LIMIT_DB, VLC_EQ_LIMIT_DB))
+                for (band in 0 until eq.bandCount()) {
+                    eq.setAmp(band, bandsDb.getOrElse(band) { 0f }.coerceIn(-VLC_EQ_LIMIT_DB, VLC_EQ_LIMIT_DB))
+                }
+                if (existing == null) {
+                    mediaPlayer.audio().setEqualizer(eq)
+                    equalizer = eq
+                }
+            }
+        }.onFailure { logger.w(it) { "Failed to apply equalizer" } }
+    }
+
+    private fun applyOutputDeviceLocked(id: String) {
+        // null output module = keep the current one (libvlc_audio_output_device_set).
+        runCatching { mediaPlayer.audio().setOutputDevice(null, id) }
+            .onFailure { logger.w(it) { "Failed to switch audio output to $id" } }
+    }
+
+    /** Re-applies the persisted EQ and output device to a freshly created player. */
+    private fun restoreEngineOptions() {
+        val store = engineStore ?: return
+        runCatching {
+            val bands = store.get(PREF_EQ_BANDS)
+                ?.split(",")
+                ?.mapNotNull { it.trim().toFloatOrNull() }
+                ?.takeIf { it.isNotEmpty() }
+            if (bands != null) {
+                val preamp = store.get(PREF_EQ_PREAMP)?.toFloatOrNull() ?: 0f
+                lock.withLock { applyEqualizerLocked(bands, preamp) }
+            }
+            store.get(PREF_OUTPUT_DEVICE)?.takeIf { it.isNotBlank() }?.let { id ->
+                lock.withLock { applyOutputDeviceLocked(id) }
+            }
+        }.onFailure { logger.w(it) { "Failed to restore sound options" } }
+    }
+
+    /** EQ drags call [setEqualizer] many times a second; write the file once they settle. */
+    private fun saveEngineStoreLater() {
+        val store = engineStore ?: return
+        engineStoreSaveJob?.cancel()
+        engineStoreSaveJob = scope.launch(Dispatchers.IO) {
+            delay(ENGINE_STORE_SAVE_DELAY)
+            runCatching { store.save() }
+                .onFailure { logger.w(it) { "Failed to save sound options" } }
+        }
+    }
+
     actual override fun isDisposed(): Boolean = disposed
 
     actual override fun dispose() {
@@ -614,5 +773,40 @@ actual class AudioPlayer actual constructor(context: Any) : AudioPlayerInterface
         } else {
             (rawVolume / 100f).coerceIn(0f, 1f)
         }
+    }
+
+}
+
+private const val PREF_NORMALIZATION = "sound_normalization"
+private const val PREF_EQ_BANDS = "sound_eq_bands"
+private const val PREF_EQ_PREAMP = "sound_eq_preamp"
+private const val PREF_OUTPUT_DEVICE = "sound_output_device"
+
+/** libVLC clamps EQ gains and preamp to ±20 dB. */
+private const val VLC_EQ_LIMIT_DB = 20f
+private const val ENGINE_STORE_FILE = "sound_engine.properties"
+private val ENGINE_STORE_SAVE_DELAY = 400.milliseconds
+
+/**
+ * A tiny key/value file for the player's own sound options. Plain [Properties] rather than
+ * java.util.prefs, which needs JNI on macOS that the GraalVM native build doesn't carry.
+ */
+private class EngineSoundStore(private val file: File) {
+    private val properties = Properties().apply {
+        runCatching { if (file.isFile) file.inputStream().use { load(it) } }
+    }
+
+    @Synchronized
+    fun get(key: String): String? = properties.getProperty(key)
+
+    @Synchronized
+    fun put(key: String, value: String?) {
+        if (value == null) properties.remove(key) else properties.setProperty(key, value)
+    }
+
+    @Synchronized
+    fun save() {
+        file.parentFile?.mkdirs()
+        file.outputStream().use { properties.store(it, "Spotube sound engine options") }
     }
 }

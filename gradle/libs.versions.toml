@@ -35,7 +35,7 @@ kmpZip = "1.0.0"
 kotlin = "2.4.21"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization-json = "1.11.0"
-millennium = "0.1.1"
+composeunstyled = "2.10.0"
 multiplatformMarkdownRenderer = "0.45.0"
 murmurhash = "0.4.2"
 newpipeextractor = "v0.26.5"
@@ -102,7 +102,10 @@ ktor-server-cio = { module = "io.ktor:ktor-server-cio", version.ref = "ktor" }
 ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
 ktor-server-websockets = { module = "io.ktor:ktor-server-websockets", version.ref = "ktor" }
 ktor-client-websockets = { module = "io.ktor:ktor-client-websockets", version.ref = "ktor" }
-millennium = { module = "org.spotube.millennium:millennium", version.ref = "millennium" }
+composeunstyled = { module = "com.composables:composeunstyled", version.ref = "composeunstyled" }
+composeunstyled-theming = { module = "com.composables:composeunstyled-theming", version.ref = "composeunstyled" }
+composeunstyled-primitives = { module = "com.composables:composeunstyled-primitives", version.ref = "composeunstyled" }
+composeunstyled-colored-indication = { module = "com.composables:composeunstyled-colored-indication", version.ref = "composeunstyled" }
 multiplatform-markdown-renderer = { module = "com.mikepenz:multiplatform-markdown-renderer", version.ref = "multiplatformMarkdownRenderer" }
 multiplatform-markdown-renderer-m3 = { module = "com.mikepenz:multiplatform-markdown-renderer-m3", version.ref = "multiplatformMarkdownRenderer" }
 murmurhash = { module = "com.goncalossilva:murmurhash", version.ref = "murmurhash" }

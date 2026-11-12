@@ -18,6 +18,10 @@
 package org.spotube.spotube.modules.artist
 
 
+import org.spotube.spotube.core.ui.component.WindowChromeBand
+import org.spotube.spotube.core.ui.component.cards.isWideShell
+import org.spotube.spotube.modules.shell.LocalAppShellBottomInset
+import org.spotube.spotube.modules.shell.LocalAppShellTopInset
 import org.spotube.spotube.core.ui.misc.itemsWithUniqueKeys
 import org.spotube.millennium.composables.MillenniumIcon
 import org.spotube.millennium.composables.MillenniumButton
@@ -46,10 +50,11 @@ import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import org.spotube.spotube.core.ui.component.BigPlayButton
-import org.spotube.spotube.core.ui.component.CrateFrame
-import org.spotube.spotube.core.ui.component.CrateRow
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -127,6 +132,9 @@ fun ArtistScreen(
     val isJamGuest by jamRoomService.role.map { it == JamRole.Guest }
         .collectAsStateWithLifecycle(initialValue = false)
     val currentQueueEntry by audioPlayerQueue.currentQueueEntryFlow.collectAsStateWithLifecycle()
+    val currentCollection by audioPlayerQueue.currentCollectionEntryFlow.collectAsStateWithLifecycle()
+    val isTopTracksQueue by viewModel.isTopTracksQueue.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
     val playerState by audioPlayer.playerStateFlow.collectAsStateWithLifecycle()
     val savedArtistIds by viewModel.savedArtistIds.collectAsStateWithLifecycle()
     val blacklistedArtistIds by viewModel.blacklistedArtistIds.collectAsStateWithLifecycle()
@@ -134,12 +142,17 @@ fun ArtistScreen(
     val trackOptionsContext by viewModel.trackOptionsContext.collectAsStateWithLifecycle()
     val showAddToPlaylistPicker by viewModel.showAddToPlaylistPicker.collectAsStateWithLifecycle()
 
+    // Wide glass shell: no opaque canvas (the room light shows through) and no title bar (the
+    // shell's floating back button replaces it); the content starts under the floating chrome.
+    val wide = isWideShell()
+    val shellTopInset = LocalAppShellTopInset.current
+    val shellBottomInset = LocalAppShellBottomInset.current
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MillenniumTheme.colors.background)
+            .then(if (wide) Modifier else Modifier.background(MillenniumTheme.colors.background))
     ) {
-        ApplicationMainBar()
+        if (!wide) ApplicationMainBar()
         Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
             when (val currentState = state) {
                 is ArtistScreenState.Loading -> {
@@ -155,11 +168,22 @@ fun ArtistScreen(
 
                 is ArtistScreenState.Loaded -> {
                     val listState = rememberLazyListState()
+                    // Top tracks load with no collection entry (there is no artist entry type), so
+                    // the VM tracks whether the queue is this artist's top tracks; the artist is
+                    // current when that queue is on one of them.
+                    val currentTrackId = (currentQueueEntry as? QueueEntry.StreamingTrack)?.track?.id
+                    val isArtistCurrent = isTopTracksQueue && currentCollection == null &&
+                        currentTrackId != null && currentState.topTracks.any { it.id == currentTrackId }
+                    val isArtistPlaying = isArtistCurrent && playerState == PlayerState.PLAYING
 
                     LazyColumn(
                         state = listState,
                         modifier = Modifier
                             .fillMaxSize(),
+                        contentPadding = PaddingValues(
+                            top = shellTopInset,
+                            bottom = if (wide) shellBottomInset + 16.dp else 0.dp
+                        ),
                         verticalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
                         item {
@@ -170,7 +194,16 @@ fun ArtistScreen(
                                 onFollowClick = viewModel::toggleSavedArtist,
                                 isBlacklisted = currentState.artist.id in blacklistedArtistIds,
                                 onBlacklistClick = { viewModel.toggleArtistBlacklist(currentState.artist) },
-                                onPlay = viewModel::playTopTracks,
+                                isPlaying = isArtistPlaying,
+                                onPlay = {
+                                    if (isArtistCurrent) {
+                                        scope.launch {
+                                            if (isArtistPlaying) audioPlayer.pause() else audioPlayer.play()
+                                        }
+                                    } else {
+                                        viewModel.playTopTracks()
+                                    }
+                                },
                                 isPlayLoading = playbackUiState.isPlayLoading,
                                 onAddToQueue = viewModel::addTopTracksToQueue,
                                 isAddToQueueLoading = playbackUiState.isAddToQueueLoading)
@@ -264,6 +297,8 @@ fun ArtistScreen(
                     }
                 }
             }
+            // Keeps the window draggable (and its buttons) under the floating chrome.
+            WindowChromeBand(Modifier.align(Alignment.TopCenter))
         }
 
         AddToPlaylistPicker(
@@ -360,6 +395,7 @@ private fun ArtistBanner(
     onFollowClick: () -> Unit,
     isBlacklisted: Boolean,
     onBlacklistClick: () -> Unit,
+    isPlaying: Boolean,
     onPlay: () -> Unit,
     isPlayLoading: Boolean,
     onAddToQueue: () -> Unit,
@@ -369,7 +405,7 @@ private fun ArtistBanner(
     val isCompact = currentWindowWidthBreakpoint() isBelow WindowBreakpoints.Medium
     val imageUrl = artist.thumbnails.firstOrNull()?.url.orEmpty()
     val tint by rememberArtworkTint(imageUrl.ifBlank { null }, fallback = colors.surfaceContainerHigh)
-    val sidePadding = if (isCompact) 16.dp else 28.dp
+    val sidePadding = artistGutter()
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Box(
@@ -437,7 +473,7 @@ private fun ArtistBanner(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            BigPlayButton(isPlaying = false, loading = isPlayLoading, onClick = onPlay)
+            BigPlayButton(isPlaying = isPlaying, loading = isPlayLoading, onClick = onPlay)
             MillenniumButton(
                 onClick = onFollowClick,
                 loading = isSaving,
@@ -502,20 +538,24 @@ private fun artistNameStyle(name: String, isCompact: Boolean): TextStyle {
     val type = AppTheme.typography
     return when {
         isCompact -> type.displaySmall
-        name.length <= 14 -> type.displayLarge.copy(fontSize = 88.sp, lineHeight = 92.sp, letterSpacing = (-2.4).sp)
+        name.length <= 14 -> type.displayLarge.copy(fontSize = 88.sp, lineHeight = 106.sp, letterSpacing = (-2.4).sp)
         name.length <= 28 -> type.displayLarge
         else -> type.displaySmall
     }
 }
 
+/** The page's one horizontal gutter: banner, section headers and shelf artwork all align to it. */
+@Composable
+private fun artistGutter(): Dp =
+    if (currentWindowWidthBreakpoint() isBelow WindowBreakpoints.Medium) 16.dp else 28.dp
+
+/** Shelf contentPadding: cards carry their own 8dp hover-plate inset, so artwork lands on the gutter. */
+@Composable
+private fun artistShelfPadding(): PaddingValues = PaddingValues(horizontal = artistGutter() - 8.dp)
+
 @Composable
 private fun TopTracksHeader() {
-    Text(
-        text = stringResource(Res.string.artist_top_tracks),
-        style = AppTheme.typography.titleLarge,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(horizontal = 28.dp)
-    )
+    SectionHeader(title = stringResource(Res.string.artist_top_tracks))
 }
 
 @Composable
@@ -524,44 +564,28 @@ private fun AlbumsSection(
     onAlbumClick: (MetadataAlbum.Detailed) -> Unit,
     onLoadMore: () -> Unit
 ) {
-    // The discography is its own crate; ids can repeat across pages, keys must not.
-    val unique = remember(albums) { albums.distinctBy { it.id } }
-    var facing by remember { mutableIntStateOf(0) }
-    if (unique.isEmpty()) return
-    val facingAlbum = unique[facing.coerceIn(0, unique.lastIndex)]
+    val rowState = rememberLazyListState()
+    LaunchedEffect(rowState) {
+        // Key on (last visible, total) so a page that still fits on screen asks again.
+        snapshotFlow {
+            val info = rowState.layoutInfo
+            (info.visibleItemsInfo.lastOrNull()?.index ?: -1) to info.totalItemsCount
+        }.distinctUntilChanged().collect { (last, total) ->
+            if (total > 0 && last >= total - 2) onLoadMore()
+        }
+    }
 
     SectionHeader(title = stringResource(Res.string.library_tab_albums))
     Spacer(modifier = Modifier.size(8.dp))
-    CrateFrame(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 24.dp)
+    LazyRow(
+        state = rowState,
+        modifier = Modifier.dragScrollable(rowState),
+        contentPadding = artistShelfPadding(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.Top
     ) {
-        CrateRow(
-            items = unique,
-            key = { it.id },
-            cover = { it.thumbnails.firstOrNull()?.url },
-            label = { it.title },
-            facingIndex = facing.coerceIn(0, unique.lastIndex),
-            onFacingChange = { facing = it },
-            onOpen = onAlbumClick,
-            faceSize = 190.dp,
-            onNearEnd = onLoadMore,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Text(
-            text = facingAlbum.title,
-            style = AppTheme.typography.titleMedium,
-            color = AppTheme.colors.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 4.dp)
-        )
-        facingAlbum.releaseDate?.take(4)?.let { year ->
-            Text(
-                text = year,
-                style = AppTheme.typography.bodySmall,
-                color = AppTheme.colors.onSurfaceVariant
-            )
+        itemsWithUniqueKeys(albums, id = { it.id }) { album ->
+            AlbumCard(album = album)
         }
     }
 }
@@ -594,7 +618,7 @@ private fun RelatedArtistsSection(
     LazyRow(
         state = rowState,
         modifier = Modifier.dragScrollable(rowState),
-        contentPadding = PaddingValues(horizontal = 16.dp),
+        contentPadding = artistShelfPadding(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.Top
     ) {
@@ -632,7 +656,7 @@ private fun FeaturedPlaylistsSection(
     LazyRow(
         state = rowState,
         modifier = Modifier.dragScrollable(rowState),
-        contentPadding = PaddingValues(horizontal = 16.dp),
+        contentPadding = artistShelfPadding(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.Top
     ) {
@@ -646,9 +670,10 @@ private fun FeaturedPlaylistsSection(
 private fun SectionHeader(title: String) {
     Text(
         text = title,
-        style = AppTheme.typography.titleLarge,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(horizontal = 16.dp)
+        // 20/28 Bold, tightened: same as Home shelves and Search sections.
+        style = AppTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, letterSpacing = (-0.3).sp),
+        color = AppTheme.colors.onSurface,
+        modifier = Modifier.padding(horizontal = artistGutter())
     )
 }
 

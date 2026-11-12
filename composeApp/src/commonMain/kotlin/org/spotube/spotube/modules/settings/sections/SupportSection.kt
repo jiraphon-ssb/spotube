@@ -37,10 +37,8 @@ internal fun LazyListScope.supportSection(
     settings: UserSettings,
     settingsViewModel: SettingsViewModel,
     includeHeader: Boolean = true) {
-    if (includeHeader) {
-        settingsSectionHeader(Res.string.settings_section_support)
-    }
     settingsSectionCard(
+        title = if (includeHeader) Res.string.settings_section_support else null,
         items = buildList {
             add {
                 SwitchSettingCard(

@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Wide-layout overlays: queue drawer, sound & EQ sheet, command palette. -->
+<resources>
+    <!-- Sound & EQ sheet -->
+    <string name="overlay_sound_title">เสียง &amp; EQ</string>
+    <string name="overlay_sound_volume">ระดับเสียง</string>
+    <string name="overlay_eq_title">อีควอไลเซอร์</string>
+    <string name="overlay_eq_custom">กำหนดเอง</string>
+    <string name="overlay_eq_presets">พรีเซ็ตอีควอไลเซอร์</string>
+    <string name="overlay_eq_preset_flat">แบน</string>
+    <string name="overlay_eq_preset_bass">เบสหนัก</string>
+    <string name="overlay_eq_preset_vocal">เสียงร้อง</string>
+    <string name="overlay_eq_preset_acoustic">อะคูสติก</string>
+    <string name="overlay_eq_preset_night">ดึก</string>
+    <string name="overlay_eq_band">%1$s Hz</string>
+    <string name="overlay_eq_unsupported">อุปกรณ์นี้ยังใช้อีควอไลเซอร์ไม่ได้</string>
+    <string name="overlay_sleep_title">ตั้งเวลาปิดเพลง</string>
+    <string name="overlay_sleep_off">ปิด</string>
+    <string name="overlay_sleep_15">15 นาที</string>
+    <string name="overlay_sleep_30">30 นาที</string>
+    <string name="overlay_sleep_60">1 ชม.</string>
+    <string name="overlay_sleep_end_of_track">จบเพลง</string>
+    <string name="overlay_sleep_remaining">หยุดในอีก %1$d นาที</string>
+    <string name="overlay_sleep_toast_minutes">จะหยุดเล่นใน %1$s</string>
+    <string name="overlay_sleep_toast_end_of_track">จะหยุดเมื่อจบเพลงนี้</string>
+    <string name="overlay_sleep_toast_off">ปิดการตั้งเวลาแล้ว</string>
+    <string name="overlay_crossfade_title">เฟดข้ามเพลง</string>
+    <string name="overlay_soon">เร็วๆ นี้</string>
+    <string name="overlay_speed_title">ความเร็ว</string>
+    <string name="overlay_more_title">เพิ่มเติม</string>
+    <string name="overlay_normalize_title">ปรับระดับเสียงให้เท่ากัน</string>
+    <string name="overlay_normalize_body">เพลงดัง-เบาไม่กระโดดเวลาเปลี่ยนเพลง</string>
+    <string name="overlay_normalize_restart">มีผลหลังเปิด Spotube ใหม่</string>
+    <string name="overlay_quality_title">คุณภาพเสียง</string>
+    <string name="overlay_quality_change">เปลี่ยน</string>
+    <string name="overlay_quality_change_description">เปลี่ยนคุณภาพเสียงในหน้าตั้งค่า</string>
+    <string name="overlay_output_title">อุปกรณ์เสียงออก</string>
+    <string name="overlay_output_default">ค่าเริ่มต้นของระบบ</string>
+    <string name="overlay_output_change">เปลี่ยนอุปกรณ์เสียงออก</string>
+    <string name="overlay_output_none">ไม่พบอุปกรณ์เสียงออก</string>
+
+    <!-- Queue drawer -->
+    <string name="overlay_queue_title">คิว</string>
+    <string name="overlay_queue_now_playing">กำลังเล่น</string>
+    <string name="overlay_queue_up_next">ถัดไป · ลากเพื่อจัดลำดับ</string>
+    <string name="overlay_queue_up_next_plain">ถัดไป</string>
+    <string name="overlay_queue_empty">ยังไม่มีเพลงในคิว เล่นเพลงสักเพลงแล้วจะขึ้นที่นี่</string>
+    <string name="overlay_queue_up_next_empty">ไม่มีเพลงถัดไป</string>
+    <string name="overlay_queue_remove">เอา %1$s ออกจากคิว</string>
+    <string name="overlay_queue_reorder">จัดลำดับ %1$s กด Alt+ลูกศรขึ้น/ลงเพื่อย้าย</string>
+    <string name="overlay_queue_read_only">คิวนี้โฮสต์ของ Jam เป็นคนจัดการ</string>
+    <string name="overlay_queue_autoplay_title">เล่นต่ออัตโนมัติ</string>
+    <string name="overlay_queue_autoplay_body">เพลงคล้ายๆ กันเมื่อคิวหมด</string>
+    <string name="overlay_queue_save">บันทึกเป็นเพลย์ลิสต์</string>
+    <string name="overlay_queue_clear">ล้างคิว</string>
+    <string name="overlay_queue_clear_description">ล้างเพลงทั้งหมดในคิว</string>
+    <string name="overlay_queue_cleared">ล้างคิวแล้ว</string>
+    <string name="overlay_queue_playlist_name">คิว · %1$s</string>
+    <string name="overlay_queue_saved">บันทึกเป็น “%1$s” แล้ว</string>
+    <string name="overlay_queue_save_failed">บันทึกเพลย์ลิสต์ไม่สำเร็จ ลองอีกครั้ง</string>
+    <string name="overlay_queue_save_sign_in">ลงชื่อเข้าใช้ปลั๊กอินข้อมูลเพลงก่อน จึงจะบันทึกเพลย์ลิสต์ได้</string>
+    <string name="overlay_queue_save_nothing">บันทึกเป็นเพลย์ลิสต์ได้เฉพาะเพลงออนไลน์</string>
+
+    <!-- Command palette -->
+    <string name="overlay_palette_placeholder">ค้นหาเพลง ศิลปิน หรือพิมพ์คำสั่ง</string>
+    <string name="overlay_palette_input_label">ค้นหาหรือสั่งงาน</string>
+    <string name="overlay_palette_group_songs">เพลง</string>
+    <string name="overlay_palette_group_artists">ศิลปิน</string>
+    <string name="overlay_palette_group_albums">อัลบั้ม</string>
+    <string name="overlay_palette_group_playlists">เพลย์ลิสต์</string>
+    <string name="overlay_palette_group_commands">คำสั่ง</string>
+    <string name="overlay_palette_searching">กำลังค้นหา…</string>
+    <string name="overlay_palette_empty">ไม่พบ “%1$s” ลองพิมพ์ชื่อเพลง ศิลปิน หรือคำสั่ง</string>
+    <string name="overlay_palette_kind_album">อัลบั้ม · %1$s</string>
+    <string name="overlay_palette_kind_artist">ศิลปิน</string>
+    <string name="overlay_palette_kind_playlist">เพลย์ลิสต์</string>
+    <string name="overlay_palette_kind_playlist_by">เพลย์ลิสต์ · %1$s</string>
+    <string name="overlay_palette_key_open">↵ เปิด</string>
+    <string name="overlay_palette_key_run">↵ ทำ</string>
+    <string name="overlay_palette_key_play">⇧↵ เล่น</string>
+    <string name="overlay_palette_hint_move">↑↓ เลือก</string>
+    <string name="overlay_palette_hint_run">↵ เปิด/ทำ</string>
+    <string name="overlay_palette_hint_play">⇧↵ เล่นเพลง</string>
+    <string name="overlay_palette_hint_close">esc ปิด</string>
+    <string name="overlay_cmd_shuffle">สลับเปิด/ปิดการสุ่ม</string>
+    <string name="overlay_cmd_repeat">เปลี่ยนโหมดเล่นซ้ำ</string>
+    <string name="overlay_cmd_sleep_30">ตั้งเวลาปิดเพลง 30 นาที</string>
+    <string name="overlay_cmd_queue">เปิดคิวเพลง</string>
+    <string name="overlay_cmd_sound">เปิดเสียง &amp; EQ</string>
+    <string name="overlay_cmd_mini">สลับเป็นมินิเพลเยอร์</string>
+    <string name="overlay_cmd_library">ไปที่คลังเพลง</string>
+    <string name="overlay_cmd_stats">ไปที่สถิติ</string>
+    <string name="overlay_cmd_settings">ไปที่ตั้งค่า</string>
+    <string name="overlay_cmd_downloads">ไปที่ดาวน์โหลด</string>
+    <string name="overlay_cmd_search">เปิดหน้าค้นหาเต็ม</string>
+    <string name="overlay_toast_shuffle_on">เปิดการสุ่มแล้ว</string>
+    <string name="overlay_toast_shuffle_off">ปิดการสุ่มแล้ว</string>
+    <string name="overlay_toast_repeat_off">ปิดการเล่นซ้ำแล้ว</string>
+    <string name="overlay_toast_repeat_one">เล่นซ้ำเพลงนี้</string>
+    <string name="overlay_toast_repeat_all">เล่นซ้ำทั้งคิว</string>
+    <string name="overlay_toast_playing">กำลังเล่น “%1$s”</string>
+</resources>

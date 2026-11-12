@@ -45,9 +45,8 @@ import org.jetbrains.compose.resources.stringResource
 import org.spotube.millennium.composables.MillenniumButton
 import org.spotube.millennium.composables.MillenniumButtonStyle
 import org.spotube.millennium.composables.MillenniumIcon
-import org.spotube.millennium.theme.MillenniumTheme
-import org.spotube.millennium.theme.millenniumPanelBrush
-import org.spotube.millennium.theme.millenniumSurface
+import org.spotube.spotube.modules.settings.components.GlassCardShape
+import org.spotube.spotube.modules.settings.components.glassSurface
 import org.spotube.spotube.core.ui.theming.AppTheme
 import org.spotube.spotube.modules.plugin.GitHubRepo
 import org.spotube.spotube.modules.plugin.isOfficialPlugin
@@ -81,13 +80,7 @@ internal fun DiscoverPluginCard(
     modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
-            .millenniumSurface(
-                background = millenniumPanelBrush(MillenniumTheme.colors),
-                shape = AppTheme.shapes.medium,
-                borderColor = MillenniumTheme.colors.border,
-                borderWidth = 1.dp,
-                shadowElevation = 6.dp,
-                innerGlowColor = MillenniumTheme.colors.highlight.copy(alpha = 0.55f))
+            .glassSurface(AppTheme.colors, GlassCardShape)
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(

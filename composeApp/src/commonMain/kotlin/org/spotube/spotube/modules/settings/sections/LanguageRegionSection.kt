@@ -41,10 +41,8 @@ internal fun LazyListScope.languageRegionSection(
     settings: UserSettings,
     settingsViewModel: SettingsViewModel,
     includeHeader: Boolean = true) {
-    if (includeHeader) {
-        settingsSectionHeader(Res.string.settings_section_language_region)
-    }
     settingsSectionCard(
+        title = if (includeHeader) Res.string.settings_section_language_region else null,
         items = listOf(
             {
                 SelectionSettingCard(

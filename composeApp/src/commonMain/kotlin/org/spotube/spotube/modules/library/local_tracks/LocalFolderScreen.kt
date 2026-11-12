@@ -3,6 +3,7 @@
  */
 package org.spotube.spotube.modules.library.local_tracks
 
+import org.spotube.spotube.modules.shell.LocalAppShellTopInset
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -17,7 +18,8 @@ import org.spotube.spotube.core.ui.component.ApplicationMainBar
 @Composable
 fun LocalFolderScreen(viewModel: LocalFolderViewModel, onBack: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    Column {
+    // Wide glass shell: clear the floating chrome (the bar itself is transparent there).
+    Column(Modifier.padding(top = LocalAppShellTopInset.current)) {
         ApplicationMainBar(
             backButton = true,
             title = { Text(state.currentFolder?.name.orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis) }

@@ -19,6 +19,7 @@ package org.spotube.spotube.modules.shell
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -56,6 +57,7 @@ import org.spotube.millennium.composables.MillenniumSlider
 import org.spotube.spotube.core.audioplayer.AudioPlayerQueue
 import org.spotube.spotube.core.navigation.NavigationCommands
 import org.spotube.spotube.core.navigation.Routes
+import org.spotube.spotube.core.ui.component.keyboardFocusRing
 import org.spotube.spotube.core.ui.theming.AppTheme
 import org.spotube.spotube.modules.downloads.DownloadsViewModel
 import org.spotube.spotube.modules.saved_tracks.SAVED_TRACKS_COLLECTION_ID
@@ -121,9 +123,8 @@ fun AppLargePlayer(
             // Now playing
             Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                 if (hasTrack) {
-                    NowPlayingStand(
+                    NowPlayingCover(
                         coverModel = player.ui.coverModel,
-                        contentDescription = player.ui.album,
                         onClick = onExpand
                     )
                     Column(modifier = Modifier.weight(1f, fill = false).padding(start = 12.dp)) {
@@ -230,43 +231,28 @@ fun AppLargePlayer(
     }
 }
 
-/**
- * The record-shop "now playing" display in miniature: the sleeve leans on a kraft ledge, tilted a
- * few degrees as if stood up by hand. Clicking it opens the full-window player.
- */
+/** The playing track's cover; clicking it opens the full-window player. */
 @Composable
-private fun NowPlayingStand(coverModel: Any?, contentDescription: String?, onClick: () -> Unit) {
-    val colors = AppTheme.colors
+private fun NowPlayingCover(coverModel: Any?, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(6.dp)
     Box(
         modifier = Modifier
-            .size(width = 56.dp, height = 60.dp)
-            // No clip here: it would cut the sleeve's shadow and tilted corners.
-            .clickable(onClick = onClick)
-    ) {
-        Box(
-            modifier = Modifier
-                .padding(start = 4.dp, top = 2.dp)
-                .size(48.dp)
-                .graphicsLayer { rotationZ = -3f }
-                .shadow(6.dp, RoundedCornerShape(2.dp))
-                .clip(RoundedCornerShape(2.dp))
-                .background(colors.surfaceContainerHigh)
-        ) {
-            AsyncImage(
-                model = coverModel,
-                contentDescription = contentDescription,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
+            .size(52.dp)
+            .keyboardFocusRing(shape)
+            .clip(shape)
+            .background(AppTheme.colors.surfaceContainerHigh)
+            .clickable(
+                onClickLabel = stringResource(Res.string.player_expand_content_description),
+                role = Role.Button,
+                onClick = onClick
             )
-        }
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 3.dp)
-                .fillMaxWidth()
-                .height(6.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(colors.kraft)
+    ) {
+        AsyncImage(
+            model = coverModel,
+            // Decorative: the title and artists sit right beside it.
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
         )
     }
 }

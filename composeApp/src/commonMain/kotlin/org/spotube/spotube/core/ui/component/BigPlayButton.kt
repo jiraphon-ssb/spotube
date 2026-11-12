@@ -52,7 +52,9 @@ fun BigPlayButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     loading: Boolean = false,
-    size: Dp = 56.dp
+    size: Dp = 56.dp,
+    /** Overrides the default "Play"/"Pause" label, e.g. "Play <title>". */
+    contentDescription: String? = null
 ) {
     val colors = AppTheme.colors
     val interaction = remember { MutableInteractionSource() }
@@ -63,14 +65,18 @@ fun BigPlayButton(
         label = "big_play_scale"
     )
     val ink = colors.onAccentFill
-    val label = stringResource(
+    val defaultLabel = stringResource(
         if (isPlaying) Res.string.player_pause_content_description
         else Res.string.player_play_content_description
     )
+    val label = contentDescription ?: defaultLabel
     MillenniumIconButton(
         // Ignore presses while a start is in flight so one click can't queue two plays.
         onClick = { if (!loading) onClick() },
         modifier = modifier
+            // The Quiet style's own focus ring is accent on an accent key (invisible); draw a
+            // text-coloured one outside it. Before graphicsLayer so the ring doesn't scale.
+            .keyboardFocusRing(CircleShape)
             .hoverable(interaction)
             .graphicsLayer { scaleX = scale; scaleY = scale },
         style = MillenniumIconButtonStyle.Quiet,

@@ -24,10 +24,13 @@ import org.spotube.spotube.core.audioplayer.AudioPlayerInterface
 import org.spotube.spotube.core.audioplayer.AudioPlayerQueue
 import org.spotube.spotube.core.audioplayer.QueueEntry
 import org.spotube.spotube.modules.plugin.PluginManager
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -42,6 +45,16 @@ enum class LyricType {
     SYNCED
 }
 
+/** Why there are no lyrics to fetch at all (as opposed to a fetch that found none or failed). */
+enum class LyricsUnavailableReason {
+    /** No lyrics plugin is installed/selected. */
+    NoPlugin,
+    /** The current entry is a local file; lyrics plugins only resolve streaming tracks. */
+    LocalFile,
+    /** The queue is empty. */
+    NothingPlaying
+}
+
 data class LyricsUiState(
     val mode: LyricType = LyricType.SYNCED,
     val syncedLyrics: List<LyricsLine>? = null,
@@ -51,7 +64,8 @@ data class LyricsUiState(
     val currentIndex: Int = -1,
     val trackTitle: String = "",
     val trackArtists: String = "",
-    val coverUrl: String = "")
+    val coverUrl: String = "",
+    val unavailable: LyricsUnavailableReason? = null)
 
 class LyricsViewModel(
     private val pluginManager: PluginManager,
@@ -73,67 +87,131 @@ class LyricsViewModel(
 
     private var currentTrackId: String? = null
 
+    /** The in-flight fetch; replaced (and cancelled) whenever another track's lyrics are requested. */
+    private var loadJob: Job? = null
+
     fun setMode(mode: LyricType) {
         _uiState.update { it.copy(mode = mode) }
     }
 
     fun loadLyrics(forceReload: Boolean = false) {
-        viewModelScope.launch {
-            val entry = audioPlayerQueue.currentQueueEntryFlow.value ?: return@launch
-            val track = when (entry) {
-                is QueueEntry.StreamingTrack -> entry.track
-                is QueueEntry.LocalTrack -> return@launch
+        val track = when (val entry = audioPlayerQueue.currentQueueEntryFlow.value) {
+            null -> {
+                markUnavailable(LyricsUnavailableReason.NothingPlaying)
+                return
             }
-
-            if (!forceReload && currentTrackId == track.id && _uiState.value.syncedLyrics != null) {
-                return@launch
+            is QueueEntry.LocalTrack -> {
+                markUnavailable(LyricsUnavailableReason.LocalFile)
+                return
             }
+            is QueueEntry.StreamingTrack -> entry.track
+        }
 
-            currentTrackId = track.id
-            _uiState.update { it.copy(isLoading = true, error = null) }
+        // Already showing (or already fetching) this track's lyrics.
+        if (!forceReload && currentTrackId == track.id &&
+            (_uiState.value.syncedLyrics != null || loadJob?.isActive == true)
+        ) {
+            return
+        }
+
+        loadJob?.cancel()
+        currentTrackId = track.id
+        val pluginService = pluginManager.selectedLyricsPlugin.value
+        if (pluginService == null) {
+            markUnavailable(LyricsUnavailableReason.NoPlugin)
+            return
+        }
+
+        // Drop the previous track's lines up front so they never show under the new title.
+        _uiState.update {
+            it.copy(
+                isLoading = true,
+                error = null,
+                unavailable = null,
+                syncedLyrics = null,
+                plainLyrics = null)
+        }
+        val requestedTrackId = track.id
+        loadJob = viewModelScope.launch {
             try {
-                pluginManager.selectedLyricsPlugin.value?.let { pluginService ->
-                    pluginService.use {
-                       val lyrics = lyricsAPI.getLyrics(track)
-
-                        _uiState.update {
-                            it.copy(
-                                syncedLyrics = lyrics?.syncedLyrics,
-                                plainLyrics = lyrics?.plainLyrics,
-                                isLoading = false)
-                        }
-                    }
-                } ?: run {
-                    _uiState.update { it.copy(isLoading = false) }
+                val lyrics = pluginService.use { lyricsAPI.getLyrics(track) }
+                // The track changed while this was in flight: these lines belong to another song.
+                if (!isStillCurrent(requestedTrackId)) return@launch
+                _uiState.update {
+                    it.copy(
+                        syncedLyrics = lyrics?.syncedLyrics,
+                        plainLyrics = lyrics?.plainLyrics,
+                        isLoading = false)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = e.message) }
+                if (!isStillCurrent(requestedTrackId)) return@launch
+                _uiState.update { it.copy(isLoading = false, error = e.message.orEmpty()) }
             }
+        }
+    }
+
+    private fun isStillCurrent(trackId: String): Boolean {
+        val entry = audioPlayerQueue.currentQueueEntryFlow.value
+        return currentTrackId == trackId &&
+            entry is QueueEntry.StreamingTrack && entry.track.id == trackId
+    }
+
+    /** Clears any lyrics left over from the previous track and records why none can load. */
+    private fun markUnavailable(reason: LyricsUnavailableReason) {
+        // Whatever was being fetched no longer applies.
+        loadJob?.cancel()
+        if (reason != LyricsUnavailableReason.NoPlugin) currentTrackId = null
+        _uiState.update {
+            it.copy(
+                syncedLyrics = null,
+                plainLyrics = null,
+                isLoading = false,
+                error = null,
+                unavailable = reason)
         }
     }
 
     init {
         viewModelScope.launch {
             audioPlayerQueue.currentQueueEntryFlow.collect { entry ->
-                val trackId = when (entry) {
-                    is QueueEntry.StreamingTrack -> entry.track.id
-                    else -> null
-                }
-                if (entry is QueueEntry.StreamingTrack) {
-                    val track = entry.track
-                    _uiState.update {
-                        it.copy(
-                            trackTitle = track.title,
-                            trackArtists = track.artists.joinToString(", ") { artist -> artist.name },
-                            coverUrl = (track.album?.thumbnails ?: track.thumbnails)
-                                ?.firstOrNull()?.url.orEmpty()
-                        )
+                when (entry) {
+                    is QueueEntry.StreamingTrack -> {
+                        val track = entry.track
+                        _uiState.update {
+                            it.copy(
+                                trackTitle = track.title,
+                                trackArtists = track.artists.joinToString(", ") { artist -> artist.name },
+                                coverUrl = (track.album?.thumbnails ?: track.thumbnails)
+                                    ?.firstOrNull()?.url.orEmpty()
+                            )
+                        }
+                        if (track.id != currentTrackId) loadLyrics()
+                    }
+
+                    is QueueEntry.LocalTrack -> {
+                        _uiState.update {
+                            it.copy(
+                                trackTitle = entry.name,
+                                trackArtists = entry.artists.joinToString(", "),
+                                coverUrl = entry.artworkUrl.orEmpty()
+                            )
+                        }
+                        markUnavailable(LyricsUnavailableReason.LocalFile)
+                    }
+
+                    null -> {
+                        _uiState.update { it.copy(trackTitle = "", trackArtists = "", coverUrl = "") }
+                        markUnavailable(LyricsUnavailableReason.NothingPlaying)
                     }
                 }
-                if (trackId != null && trackId != currentTrackId) {
-                    loadLyrics()
-                }
             }
+        }
+        // The selected lyrics plugin resolves asynchronously at startup (and changes when the
+        // user installs/switches one): retry so a "no plugin" state doesn't stick.
+        viewModelScope.launch {
+            pluginManager.selectedLyricsPlugin.drop(1).collect { loadLyrics(forceReload = true) }
         }
     }
 

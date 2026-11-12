@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Wide-layout overlays: queue drawer, sound & EQ sheet, command palette. -->
+<resources>
+    <!-- Sound & EQ sheet -->
+    <string name="overlay_sound_title">Sound &amp; EQ</string>
+    <string name="overlay_sound_volume">Volume</string>
+    <string name="overlay_eq_title">Equalizer</string>
+    <string name="overlay_eq_custom">Custom</string>
+    <string name="overlay_eq_presets">Equalizer presets</string>
+    <string name="overlay_eq_preset_flat">Flat</string>
+    <string name="overlay_eq_preset_bass">Bass</string>
+    <string name="overlay_eq_preset_vocal">Vocal</string>
+    <string name="overlay_eq_preset_acoustic">Acoustic</string>
+    <string name="overlay_eq_preset_night">Night</string>
+    <string name="overlay_eq_band">%1$s Hz</string>
+    <string name="overlay_eq_unsupported">The equalizer isn\'t available on this device yet.</string>
+    <string name="overlay_sleep_title">Sleep timer</string>
+    <string name="overlay_sleep_off">Off</string>
+    <string name="overlay_sleep_15">15 min</string>
+    <string name="overlay_sleep_30">30 min</string>
+    <string name="overlay_sleep_60">1 hr</string>
+    <string name="overlay_sleep_end_of_track">End of track</string>
+    <string name="overlay_sleep_remaining">Stops in %1$d min</string>
+    <string name="overlay_sleep_toast_minutes">Music will stop in %1$s</string>
+    <string name="overlay_sleep_toast_end_of_track">Music will stop after this track</string>
+    <string name="overlay_sleep_toast_off">Sleep timer off</string>
+    <string name="overlay_crossfade_title">Crossfade</string>
+    <string name="overlay_soon">Coming soon</string>
+    <string name="overlay_speed_title">Speed</string>
+    <string name="overlay_more_title">More</string>
+    <string name="overlay_normalize_title">Volume normalization</string>
+    <string name="overlay_normalize_body">Keeps loud and quiet tracks at a similar level</string>
+    <string name="overlay_normalize_restart">Takes effect after you restart Spotube</string>
+    <string name="overlay_quality_title">Streaming quality</string>
+    <string name="overlay_quality_change">Change</string>
+    <string name="overlay_quality_change_description">Change streaming quality in Settings</string>
+    <string name="overlay_output_title">Output device</string>
+    <string name="overlay_output_default">System default</string>
+    <string name="overlay_output_change">Change output device</string>
+    <string name="overlay_output_none">No outputs found</string>
+
+    <!-- Queue drawer -->
+    <string name="overlay_queue_title">Queue</string>
+    <string name="overlay_queue_now_playing">Now playing</string>
+    <string name="overlay_queue_up_next">Up next · drag to reorder</string>
+    <string name="overlay_queue_up_next_plain">Up next</string>
+    <string name="overlay_queue_empty">The queue is empty. Play a song and it shows up here.</string>
+    <string name="overlay_queue_up_next_empty">Nothing up next</string>
+    <string name="overlay_queue_remove">Remove %1$s from the queue</string>
+    <string name="overlay_queue_reorder">Reorder %1$s. Alt+Up or Alt+Down moves it.</string>
+    <string name="overlay_queue_read_only">The jam host manages this queue</string>
+    <string name="overlay_queue_autoplay_title">Autoplay</string>
+    <string name="overlay_queue_autoplay_body">Similar songs when the queue ends</string>
+    <string name="overlay_queue_save">Save as playlist</string>
+    <string name="overlay_queue_clear">Clear</string>
+    <string name="overlay_queue_clear_description">Clear the queue</string>
+    <string name="overlay_queue_cleared">Queue cleared</string>
+    <string name="overlay_queue_playlist_name">Queue · %1$s</string>
+    <string name="overlay_queue_saved">Saved as “%1$s”</string>
+    <string name="overlay_queue_save_failed">Couldn\'t save the playlist. Try again.</string>
+    <string name="overlay_queue_save_sign_in">Sign in with a metadata plugin to save playlists</string>
+    <string name="overlay_queue_save_nothing">Only online songs can be saved to a playlist</string>
+
+    <!-- Command palette -->
+    <string name="overlay_palette_placeholder">Search songs, artists, or type a command</string>
+    <string name="overlay_palette_input_label">Search or run a command</string>
+    <string name="overlay_palette_group_songs">Songs</string>
+    <string name="overlay_palette_group_artists">Artists</string>
+    <string name="overlay_palette_group_albums">Albums</string>
+    <string name="overlay_palette_group_playlists">Playlists</string>
+    <string name="overlay_palette_group_commands">Commands</string>
+    <string name="overlay_palette_searching">Searching…</string>
+    <string name="overlay_palette_empty">No results for “%1$s” — try a song, artist or command</string>
+    <string name="overlay_palette_kind_album">Album · %1$s</string>
+    <string name="overlay_palette_kind_artist">Artist</string>
+    <string name="overlay_palette_kind_playlist">Playlist</string>
+    <string name="overlay_palette_kind_playlist_by">Playlist · %1$s</string>
+    <string name="overlay_palette_key_open">↵ Open</string>
+    <string name="overlay_palette_key_run">↵ Run</string>
+    <string name="overlay_palette_key_play">⇧↵ Play</string>
+    <string name="overlay_palette_hint_move">↑↓ select</string>
+    <string name="overlay_palette_hint_run">↵ open or run</string>
+    <string name="overlay_palette_hint_play">⇧↵ play song</string>
+    <string name="overlay_palette_hint_close">esc close</string>
+    <string name="overlay_cmd_shuffle">Toggle shuffle</string>
+    <string name="overlay_cmd_repeat">Toggle repeat</string>
+    <string name="overlay_cmd_sleep_30">Sleep timer: 30 minutes</string>
+    <string name="overlay_cmd_queue">Open queue</string>
+    <string name="overlay_cmd_sound">Open Sound &amp; EQ</string>
+    <string name="overlay_cmd_mini">Mini player</string>
+    <string name="overlay_cmd_library">Go to Library</string>
+    <string name="overlay_cmd_stats">Go to Stats</string>
+    <string name="overlay_cmd_settings">Go to Settings</string>
+    <string name="overlay_cmd_downloads">Go to Downloads</string>
+    <string name="overlay_cmd_search">Open full search</string>
+    <string name="overlay_toast_shuffle_on">Shuffle on</string>
+    <string name="overlay_toast_shuffle_off">Shuffle off</string>
+    <string name="overlay_toast_repeat_off">Repeat off</string>
+    <string name="overlay_toast_repeat_one">Repeating this song</string>
+    <string name="overlay_toast_repeat_all">Repeating the queue</string>
+    <string name="overlay_toast_playing">Playing “%1$s”</string>
+</resources>

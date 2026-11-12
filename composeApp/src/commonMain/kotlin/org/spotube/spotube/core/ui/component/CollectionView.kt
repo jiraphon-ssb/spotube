@@ -18,6 +18,10 @@
 package org.spotube.spotube.core.ui.component
 
 
+import androidx.compose.foundation.layout.PaddingValues
+import org.spotube.spotube.core.ui.component.cards.isWideShell
+import org.spotube.spotube.modules.shell.LocalAppShellBottomInset
+import org.spotube.spotube.modules.shell.LocalAppShellTopInset
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -110,8 +114,17 @@ fun CollectionView(
         }
     }
 
+    // Wide glass shell: no title bar (the shell's floating back button and capsule replace it),
+    // the list starts under the floating chrome and the window stays draggable there.
+    val wide = isWideShell()
+    val topInset = LocalAppShellTopInset.current
+    val bottomInset = LocalAppShellBottomInset.current
+    // Only a fully loaded list gives an honest count and length.
+    val knownCount = if (!hasMore && tracks.isNotEmpty()) tracks.size else null
+    val knownDuration = if (knownCount != null) tracks.sumOf { it.durationMs } else null
+
     Column(modifier = Modifier.fillMaxSize()) {
-        ApplicationMainBar(
+        if (!wide) ApplicationMainBar(
             backButton = true,
             title = if (isCollapsed) {
                 {
@@ -146,8 +159,11 @@ fun CollectionView(
                 modifier = Modifier.fillMaxSize())
         } else {
             TrackList(
-                modifier = Modifier.fillMaxSize(),
+                // The list starts under the floating chrome (not under it with padding) so the
+                // sticky column header pins below the capsule instead of behind it.
+                modifier = Modifier.fillMaxSize().padding(top = topInset),
                 state = listState,
+                contentPadding = PaddingValues(bottom = bottomInset),
                 headerContent = {
                     if (isLoading && tracks.isEmpty()) {
                         org.spotube.spotube.core.ui.misc.SkeletonTree(true) {
@@ -173,7 +189,9 @@ fun CollectionView(
                                 onEdit = onEdit,
                                 sharedElementKey = sharedElementKey,
                                 isJamGuest = isJamGuest,
-                                onAddToJam = { onAddToJam(tracks) })
+                                onAddToJam = { onAddToJam(tracks) },
+                                trackCount = knownCount,
+                                totalDurationMs = knownDuration)
                         }
                     } else {
                         CollectionDetails(
@@ -198,7 +216,9 @@ fun CollectionView(
                             onEdit = onEdit,
                             sharedElementKey = sharedElementKey,
                             isJamGuest = isJamGuest,
-                            onAddToJam = { onAddToJam(tracks) })
+                            onAddToJam = { onAddToJam(tracks) },
+                            trackCount = knownCount,
+                            totalDurationMs = knownDuration)
                     }
                 },
                 footerContent = footerContent,
@@ -226,6 +246,7 @@ fun CollectionView(
         }
 
         trailingContent()
+        WindowChromeBand(Modifier.align(Alignment.TopCenter))
         }
     }
 }

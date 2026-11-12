@@ -222,7 +222,7 @@ kotlin {
                 implementation(libs.dns.sd.kt)
 
                 // Millennium UI
-                implementation(libs.millennium)
+                implementation(project(":millennium"))
 
                 // Navigation
                 implementation(libs.jetbrains.navigation3.ui)

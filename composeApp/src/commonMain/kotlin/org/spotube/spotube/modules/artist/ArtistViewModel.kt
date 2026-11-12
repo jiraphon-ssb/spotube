@@ -109,6 +109,39 @@ class ArtistViewModel(
     private val _showAddToPlaylistPicker = MutableStateFlow(false)
     val showAddToPlaylistPicker: StateFlow<Boolean> = _showAddToPlaylistPicker.asStateFlow()
 
+    /**
+     * Queue track ids as loaded by a top-tracks play started from this screen. Cleared as soon as
+     * the queue's list changes, so a later queue that happens to hold a top track doesn't count.
+     */
+    private val topTracksQueueIds = MutableStateFlow<List<String>?>(null)
+
+    /** A top-tracks play was requested and the queue hasn't picked up the artist's list yet. */
+    private var topTracksPlayPending = false
+
+    /**
+     * The queue is this artist's top tracks — not merely any queue sitting on one of them (e.g. a
+     * single song played from Search).
+     */
+    val isTopTracksQueue: StateFlow<Boolean> = combine(
+        audioPlayerQueue.queueFlow,
+        _state,
+        topTracksQueueIds,
+        _blacklistedTrackIds,
+        _blacklistedArtistIds) { queue, state, startedIds, blacklistedTracks, blacklistedArtists ->
+        val topTracks = (state as? ArtistScreenState.Loaded)?.topTracks ?: return@combine false
+        val queueIds = queue.streamingTrackIds() ?: return@combine false
+        if (startedIds != null && startedIds == queueIds) return@combine true
+        // Fallback (e.g. the screen was reopened while they play): the queue holds exactly the
+        // playable top tracks.
+        val playableIds = topTracks
+            .filter { track ->
+                track.id !in blacklistedTracks && track.artists.none { it.id in blacklistedArtists }
+            }
+            .map { it.id }
+            .toSet()
+        playableIds.isNotEmpty() && queueIds.toSet() == playableIds
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     val trackOptionsContext: StateFlow<TrackOptionsContext> = combine(
         audioPlayerQueue.queueFlow,
         audioPlayerQueue.currentQueueEntryFlow,
@@ -140,8 +173,34 @@ class ArtistViewModel(
         blacklistRepository.blacklistedArtists
             .onEach { artists -> _blacklistedArtistIds.value = artists.map { it.id }.toSet() }
             .launchIn(viewModelScope)
+        audioPlayerQueue.queueFlow
+            .onEach { queue -> trackTopTracksQueue(queue) }
+            .launchIn(viewModelScope)
         loadCurrentUser()
         loadOverview()
+    }
+
+    /** Remembers the queue a top-tracks play loaded, and forgets it once the queue changes. */
+    private fun trackTopTracksQueue(queue: List<QueueEntry>) {
+        val ids = queue.streamingTrackIds()
+        val topIds = (_state.value as? ArtistScreenState.Loaded)?.topTracks?.map { it.id }?.toSet()
+        if (topTracksPlayPending && ids != null && topIds != null && ids.any { it in topIds }) {
+            topTracksPlayPending = false
+            topTracksQueueIds.value = ids
+        } else if (topTracksQueueIds.value != null && topTracksQueueIds.value != ids) {
+            topTracksQueueIds.value = null
+        }
+    }
+
+    /** Streaming track ids in queue order; null for an empty queue or one holding local files. */
+    private fun List<QueueEntry>.streamingTrackIds(): List<String>? {
+        if (isEmpty()) return null
+        return map { entry -> (entry as? QueueEntry.StreamingTrack)?.track?.id ?: return null }
+    }
+
+    private fun markTopTracksPlayRequested() {
+        // Jumping within a queue that is already the top tracks doesn't change the queue.
+        if (!isTopTracksQueue.value) topTracksPlayPending = true
     }
 
     private fun loadCurrentUser() {
@@ -274,6 +333,7 @@ class ArtistViewModel(
     }
 
     fun playTopTracks() {
+        markTopTracksPlayRequested()
         val artistName = (_state.value as? ArtistScreenState.Loaded)?.artist?.name ?: "Artist"
         remotePlaybackController.requestCollectionPlay(
             RemoteCollectionType.ArtistTopTracks,
@@ -282,6 +342,7 @@ class ArtistViewModel(
     }
 
     fun playTopTracksFromTrack(track: MetadataTrack) {
+        markTopTracksPlayRequested()
         val artistName = (_state.value as? ArtistScreenState.Loaded)?.artist?.name ?: "Artist"
         remotePlaybackController.requestCollectionPlay(
             type = RemoteCollectionType.ArtistTopTracks,

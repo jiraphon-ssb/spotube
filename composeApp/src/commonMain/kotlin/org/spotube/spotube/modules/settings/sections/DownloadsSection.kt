@@ -69,10 +69,8 @@ internal fun LazyListScope.downloadsSection(
         current = settings.downloadMusicQuality
     )
 
-    if (includeHeader) {
-        settingsSectionHeader(Res.string.settings_section_downloads)
-    }
     settingsSectionCard(
+        title = if (includeHeader) Res.string.settings_section_downloads else null,
         items = listOf(
             {
                 DownloadFolderSettingCard(

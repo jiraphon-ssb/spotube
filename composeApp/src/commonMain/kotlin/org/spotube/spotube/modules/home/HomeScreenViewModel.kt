@@ -26,6 +26,7 @@ import org.spotube.plugin_interfaces.plugin_apis.metadata.common.PaginationResul
 import org.spotube.plugin_interfaces.plugin_apis.metadata.common.PaginationStrategy
 import org.spotube.spotube.core.di.injectLogger
 import org.spotube.spotube.modules.plugin.PluginManager
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,12 +50,19 @@ sealed interface HomeScreenState {
         val browseSections: Map<String, List<MetadataBrowseSection>?>
         val paginationStrategies: Map<String, PaginationStrategy?>
 
+        /**
+         * The last page (or genre) fetch failed. Content already loaded stays on screen; the UI
+         * shows a retry row instead of replacing everything with an error.
+         */
+        val appendError: Boolean get() = false
+
         data class Loaded(
             override val featuredItems: List<MetadataBrowseItem>,
             override val genres: List<MetadataBrowseGenre>,
             override val selectedGenreId: String?,
             override val browseSections: Map<String, List<MetadataBrowseSection>?>,
-            override val paginationStrategies: Map<String, PaginationStrategy?>) : Data {
+            override val paginationStrategies: Map<String, PaginationStrategy?>,
+            override val appendError: Boolean = false) : Data {
             fun toLoadingMore(): LoadingMore = LoadingMore(
                 featuredItems = featuredItems,
                 genres = genres,
@@ -113,6 +121,8 @@ class HomeScreenViewModel(
             browseSections = browseSections,
             paginationStrategies = paginationStrategies)
     }.onFailure { e ->
+        // Leaving the screen / plugin switch cancels the load: that's not a load failure.
+        if (e is CancellationException) throw e
         logger.e(e) { "Failed to load home screen data" }
         state.value = HomeScreenState.Error(e.message ?: getString(Res.string.common_unknown_error))
     }
@@ -121,44 +131,96 @@ class HomeScreenViewModel(
         val currentState = state.value
         if (currentState is HomeScreenState.Data) {
             state.value = when (currentState) {
-                is HomeScreenState.Data.Loaded -> currentState.copy(selectedGenreId = genreId)
+                is HomeScreenState.Data.Loaded -> currentState.copy(selectedGenreId = genreId, appendError = false)
                 is HomeScreenState.Data.LoadingMore -> currentState.copy(selectedGenreId = genreId)
             }
             if (currentState.browseSections[genreId] == null) {
-                viewModelScope.launch {
-                    val result = repository.list(genreId)
-                    val current = state.value
-                    if (current is HomeScreenState.Data) {
-                        state.value = HomeScreenState.Data.Loaded(
-                            featuredItems = current.featuredItems,
-                            genres = current.genres,
-                            selectedGenreId = genreId,
-                            browseSections = current.browseSections + (genreId to (result?.items ?: emptyList())),
-                            paginationStrategies = current.paginationStrategies + (genreId to result?.nextPagination))
-                    }
-                }
+                viewModelScope.launch { loadGenre(genreId) }
             }
         }
     }
 
-    suspend fun loadMoreData() = runCatching {
-        val currentState = state.value
-        if (currentState is HomeScreenState.Data.Loaded) {
-            val genreId = currentState.selectedGenreId ?: return@runCatching
-            val pagination = currentState.paginationStrategies[genreId] ?: return@runCatching
-            state.value = currentState.toLoadingMore()
-            val result = repository.list(genreId, pagination)
-            val existingSections = currentState.browseSections[genreId] ?: emptyList()
-            state.value = HomeScreenState.Data.Loaded(
-                featuredItems = currentState.featuredItems,
-                genres = currentState.genres,
-                selectedGenreId = genreId,
-                browseSections = currentState.browseSections + (genreId to (existingSections + (result?.items ?: emptyList()))),
-                paginationStrategies = currentState.paginationStrategies + (genreId to result?.nextPagination))
+    private suspend fun loadGenre(genreId: String) {
+        runCatching { repository.list(genreId) }
+            .onSuccess { result ->
+                val current = state.value
+                if (current is HomeScreenState.Data) {
+                    state.value = HomeScreenState.Data.Loaded(
+                        featuredItems = current.featuredItems,
+                        genres = current.genres,
+                        selectedGenreId = current.selectedGenreId,
+                        browseSections = current.browseSections + (genreId to (result?.items ?: emptyList())),
+                        paginationStrategies = current.paginationStrategies + (genreId to result?.nextPagination))
+                }
+            }
+            .onFailure { e ->
+                if (e is CancellationException) throw e
+                logger.e(e) { "Failed to load home genre $genreId" }
+                markAppendError()
+            }
+    }
+
+    suspend fun loadMoreData() {
+        val currentState = state.value as? HomeScreenState.Data.Loaded ?: return
+        // After a failure, wait for an explicit retry instead of re-firing on every scroll.
+        if (currentState.appendError) return
+        val genreId = currentState.selectedGenreId ?: return
+        val pagination = currentState.paginationStrategies[genreId] ?: return
+        state.value = currentState.toLoadingMore()
+        runCatching { repository.list(genreId, pagination) }
+            .onSuccess { result ->
+                val latest = state.value as? HomeScreenState.Data ?: return@onSuccess
+                val existingSections = latest.browseSections[genreId] ?: emptyList()
+                state.value = HomeScreenState.Data.Loaded(
+                    featuredItems = latest.featuredItems,
+                    genres = latest.genres,
+                    selectedGenreId = latest.selectedGenreId,
+                    browseSections = latest.browseSections + (genreId to (existingSections + (result?.items ?: emptyList()))),
+                    paginationStrategies = latest.paginationStrategies + (genreId to result?.nextPagination))
+            }
+            .onFailure { e ->
+                if (e is CancellationException) {
+                    // Cancelled (e.g. the screen left): drop the spinner so the next scroll can
+                    // load again, without showing a false "Couldn't load more" row.
+                    clearLoadingMore()
+                    throw e
+                }
+                logger.e(e) { "Failed to load more home screen data" }
+                markAppendError()
+            }
+    }
+
+    /** Back to Loaded after a cancelled page fetch, so loadMoreData isn't stuck on LoadingMore. */
+    private fun clearLoadingMore() {
+        val latest = state.value as? HomeScreenState.Data.LoadingMore ?: return
+        state.value = HomeScreenState.Data.Loaded(
+            featuredItems = latest.featuredItems,
+            genres = latest.genres,
+            selectedGenreId = latest.selectedGenreId,
+            browseSections = latest.browseSections,
+            paginationStrategies = latest.paginationStrategies)
+    }
+
+    /** Keeps whatever is loaded and flags the failed fetch for the retry row. */
+    private fun markAppendError() {
+        val latest = state.value as? HomeScreenState.Data ?: return
+        state.value = HomeScreenState.Data.Loaded(
+            featuredItems = latest.featuredItems,
+            genres = latest.genres,
+            selectedGenreId = latest.selectedGenreId,
+            browseSections = latest.browseSections,
+            paginationStrategies = latest.paginationStrategies,
+            appendError = true)
+    }
+
+    /** Retries whichever fetch failed: the selected genre's first page, or the next page. */
+    fun retryAppend() {
+        val current = state.value as? HomeScreenState.Data.Loaded ?: return
+        state.value = current.copy(appendError = false)
+        val genreId = current.selectedGenreId ?: return
+        viewModelScope.launch {
+            if (current.browseSections[genreId] == null) loadGenre(genreId) else loadMoreData()
         }
-    }.onFailure { e ->
-        logger.e(e) { "Failed to load more home screen data" }
-        state.value = HomeScreenState.Error(e.message ?: getString(Res.string.common_unknown_error))
     }
 
     fun refresh() {

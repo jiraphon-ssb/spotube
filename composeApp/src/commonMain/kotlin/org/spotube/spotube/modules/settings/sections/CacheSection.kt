@@ -46,10 +46,8 @@ internal fun LazyListScope.cacheSection(
     settings: UserSettings,
     settingsViewModel: SettingsViewModel,
     includeHeader: Boolean = true) {
-    if (includeHeader) {
-        settingsSectionHeader(Res.string.settings_section_caching)
-    }
     settingsSectionCard(
+        title = if (includeHeader) Res.string.settings_section_caching else null,
         items = listOf(
             {
                 SwitchSettingCard(

@@ -30,8 +30,8 @@ import spotube.composeapp.generated.resources.settings_section_jam
 internal fun LazyListScope.jamSection(
     settings: UserSettings,
     navigationCommands: NavigationCommands) {
-    settingsSectionHeader(Res.string.settings_section_jam)
     settingsSectionCard(
+        title = Res.string.settings_section_jam,
         items = listOf(
             {
                 SettingCardItem(

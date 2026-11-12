@@ -58,9 +58,48 @@ interface AudioPlayerInterface {
     suspend fun setVolume(volume: Float)
     suspend fun setPlaybackSpeed(speed: Float)
 
+    // Sound options. Defaults are no-ops so platforms without the capability need no code; the
+    // UI hides a control when its `supports…` flag is false.
+
+    /** Whether [setEqualizer] has an audible effect on this platform. */
+    val supportsEqualizer: Boolean get() = false
+
+    /**
+     * Applies a 10-band graphic EQ ([EqualizerBandsHz]), gains in dB (about -12..+12).
+     * `null` turns the EQ off. [preampDb] is applied before the bands (negative = headroom).
+     */
+    suspend fun setEqualizer(bandsDb: List<Float>?, preampDb: Float = 0f) {}
+
+    /** Whether [outputDevices] / [setOutputDevice] work on this platform. */
+    val supportsOutputDevices: Boolean get() = false
+
+    /** Audio outputs the player can route to. Empty when unsupported or none are reported. */
+    suspend fun outputDevices(): List<AudioOutputDevice> = emptyList()
+
+    /** The id of the output currently in use, if the platform reports it. */
+    suspend fun currentOutputDevice(): String? = null
+
+    /** Routes playback to the device with [id]; `null` leaves the current routing unchanged. */
+    suspend fun setOutputDevice(id: String?) {}
+
+    /** Whether [setVolumeNormalization] is honoured on this platform. */
+    val supportsVolumeNormalization: Boolean get() = false
+
+    /**
+     * Evens out loudness between tracks. Desktop (VLC `normvol`) can only add the filter when the
+     * player is created, so the change is stored and takes effect on the next app start.
+     */
+    suspend fun setVolumeNormalization(enabled: Boolean) {}
+
     fun isDisposed(): Boolean
     fun dispose() // Clean up resources when done. The player should not be used after this is called.
 }
+
+/** Centre frequencies of the [AudioPlayerInterface.setEqualizer] bands (ISO, as VLC uses). */
+val EqualizerBandsHz: List<Int> = listOf(31, 62, 125, 250, 500, 1_000, 2_000, 4_000, 8_000, 16_000)
+
+/** An audio output the player can route to. [id] is platform specific and opaque. */
+data class AudioOutputDevice(val id: String, val name: String)
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 expect class AudioPlayer(context: Any) : AudioPlayerInterface {

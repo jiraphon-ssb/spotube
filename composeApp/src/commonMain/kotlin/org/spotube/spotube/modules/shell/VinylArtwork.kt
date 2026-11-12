@@ -60,9 +60,6 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.isActive
 import org.spotube.spotube.core.ui.theming.AppTheme
 
-/** Space under the sleeve for the display ledge it stands on. */
-private val LedgeRoom = 14.dp
-
 /** One revolution at 33⅓ rpm. */
 private const val REVOLUTION_MS = 1800
 
@@ -128,18 +125,7 @@ internal fun VinylArtwork(
         val disc = sleeve * 0.96f
         val travel = sleeve * 0.42f
 
-        Box(modifier = Modifier.width(sleeve + travel).height(sleeve + LedgeRoom)) {
-            // The counter's display ledge the sleeve stands on.
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .offset(x = (-14).dp)
-                    .width(sleeve + 28.dp)
-                    .height(14.dp)
-                    .shadow(8.dp, RoundedCornerShape(3.dp))
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(colors.kraft)
-            )
+        Box(modifier = Modifier.width(sleeve + travel).height(sleeve)) {
             // The record, behind the sleeve.
             Box(
                 modifier = Modifier
@@ -161,9 +147,8 @@ internal fun VinylArtwork(
             Box(
                 modifier = Modifier
                     .size(sleeve)
-                    .graphicsLayer { rotationZ = -1.5f }
-                    .shadow(24.dp, RoundedCornerShape(3.dp))
-                    .clip(RoundedCornerShape(3.dp))
+                    .shadow(24.dp, RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(8.dp))
                     .background(colors.surfaceContainerHigh)
                     .clickable(enabled = albumId != null) { albumId?.let(onOpenAlbum) }
             ) {

@@ -22,6 +22,7 @@ import org.spotube.millennium.composables.MillenniumIcon
 import org.spotube.millennium.composables.MillenniumIconButton
 import org.spotube.millennium.composables.MillenniumIconButtonStyle
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.ui.Modifier
 
 import androidx.compose.runtime.Composable
 import org.spotube.spotube.core.navigation.NavigationCommands
@@ -54,3 +55,12 @@ expect fun ApplicationMainBar(
     actions: @Composable (RowScope.() -> Unit) = {},
     backButton: Boolean = true,
     transparent: Boolean = false)
+
+/**
+ * The window strip under the wide shell's floating chrome: a transparent band as tall as
+ * [org.spotube.spotube.modules.shell.LocalAppShellTopInset] that drags the window and (Windows /
+ * Linux) holds the window buttons. Pages that drop their title bar in the wide layout overlay this
+ * at their top so the window stays draggable. Draws nothing in the compact layout.
+ */
+@Composable
+expect fun WindowChromeBand(modifier: Modifier = Modifier)

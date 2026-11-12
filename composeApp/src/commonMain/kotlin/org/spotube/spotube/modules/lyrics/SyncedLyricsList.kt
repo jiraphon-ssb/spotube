@@ -18,7 +18,10 @@
 package org.spotube.spotube.modules.lyrics
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -56,7 +59,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.composeunstyled.Text
 import org.spotube.plugin_interfaces.plugin_apis.lyrics.LyricsLine
+import org.jetbrains.compose.resources.stringResource
+import org.spotube.spotube.core.ui.component.keyboardFocusRing
 import org.spotube.spotube.core.ui.theming.AppTheme
+import spotube.composeapp.generated.resources.Res
+import spotube.composeapp.generated.resources.a11y_seek_to_line
 import org.spotube.millennium.theme.MillenniumTheme
 
 private const val LYRICS_BLANK_LINE = "\u266A"
@@ -72,7 +79,12 @@ fun SyncedLyricsList(
     lines: List<LyricsLine>,
     currentIndex: Int,
     modifier: Modifier = Modifier,
-    onLineClick: ((LyricsLine) -> Unit)? = null
+    onLineClick: ((LyricsLine) -> Unit)? = null,
+    /**
+     * Current playback position in ms, read in the draw phase only. When given, the sung line
+     * fills left to right (karaoke) by how far playback is between its start and the next line's.
+     */
+    positionMillis: (() -> Long)? = null
 ) {
     val listState = rememberLazyListState()
     val colors = MillenniumTheme.colors
@@ -101,21 +113,26 @@ fun SyncedLyricsList(
             itemsIndexed(lines, key = { index, line -> "$index-${line.time}" }) { index, line ->
                 val isCurrent = index == currentIndex
                 val text = line.text.ifBlank { LYRICS_BLANK_LINE }
-                val color by animateColorAsState(
-                    when {
-                        isCurrent -> colors.accent
-                        index < currentIndex -> colors.muted.copy(alpha = 0.55f)
-                        else -> colors.muted
-                    }
-                )
                 if (onLineClick != null) {
                     ImmersiveLyricLine(
                         text = text,
                         distance = kotlin.math.abs(index - currentIndex),
                         isCurrent = isCurrent,
+                        isPast = index < currentIndex,
+                        lineStart = line.time,
+                        lineEnd = lines.getOrNull(index + 1)?.time,
+                        positionMillis = positionMillis,
                         onClick = { onLineClick(line) }
                     )
                 } else {
+                    // Only the passive preview tints by position; the immersive lines fade instead.
+                    val color by animateColorAsState(
+                        when {
+                            isCurrent -> colors.accent
+                            index < currentIndex -> colors.muted.copy(alpha = 0.55f)
+                            else -> colors.muted
+                        }
+                    )
                     Text(
                         text = text,
                         modifier = Modifier
@@ -139,17 +156,25 @@ private fun ImmersiveLyricLine(
     text: String,
     distance: Int,
     isCurrent: Boolean,
+    isPast: Boolean,
+    lineStart: Long,
+    lineEnd: Long?,
+    positionMillis: (() -> Long)?,
     onClick: () -> Unit
 ) {
     val colors = MillenniumTheme.colors
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
-    // Big, left-aligned lines: the sung line in full paper white, the rest fading with distance.
-    val targetAlpha = when (distance) {
-        0 -> 1f
-        1 -> 0.42f
-        2 -> 0.32f
-        else -> 0.24f
+    val karaoke = isCurrent && positionMillis != null
+    // Big, left-aligned lines: the sung line in full paper white (or filling up to it), lines
+    // already sung dimmest, the rest fading with distance. Upcoming lines never go below 0.42 so
+    // they keep >= 3:1 contrast as large text.
+    val targetAlpha = when {
+        isCurrent -> 1f
+        isPast -> 0.34f
+        distance == 1 -> 0.58f
+        distance == 2 -> 0.48f
+        else -> 0.42f
     }
     val alpha by animateFloatAsState(targetAlpha, tween(300))
     val scale by animateFloatAsState(if (isCurrent) 1f else 0.97f, tween(300))
@@ -157,32 +182,73 @@ private fun ImmersiveLyricLine(
     val hoverBackground by animateColorAsState(
         if (hovered && !isCurrent) colors.text.copy(alpha = 0.06f) else Color.Transparent
     )
+    val shape = RoundedCornerShape(14.dp)
+    val seekLabel = stringResource(Res.string.a11y_seek_to_line)
+    val style = AppTheme.typography.displaySmall.copy(
+        fontSize = 34.sp,
+        lineHeight = 46.sp,
+        letterSpacing = (-0.7).sp,
+        fontWeight = FontWeight.Bold,
+        color = color
+    )
 
-    Text(
-        text = text,
+    Box(
         modifier = Modifier
             .fillMaxWidth()
+            // Inset so the focus ring stays inside the list's offscreen fade layer, which clips;
+            // the inner padding drops by the same 4dp so the text doesn't move.
+            .padding(horizontal = 4.dp)
+            // Before graphicsLayer: the ring neither fades nor scales with the line.
+            .keyboardFocusRing(shape)
             .graphicsLayer {
                 transformOrigin = TransformOrigin(0f, 0.5f)
                 scaleX = scale
                 scaleY = scale
                 this.alpha = if (hovered) maxOf(alpha, 0.75f) else alpha
             }
-            .clip(RoundedCornerShape(14.dp))
+            .clip(shape)
             .background(hoverBackground)
             .hoverable(interaction)
             .pointerHoverIcon(PointerIcon.Hand)
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        style = AppTheme.typography.displaySmall.copy(
-            fontSize = 34.sp,
-            lineHeight = 46.sp,
-            fontWeight = FontWeight.Bold,
-            color = color
-        ),
-        textAlign = TextAlign.Start
-    )
+            .clickable(
+                interactionSource = interaction,
+                indication = null,
+                onClickLabel = seekLabel,
+                onClick = onClick
+            )
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+    ) {
+        // Karaoke: the line twice, muted underneath and bright on top, clipped at the progress
+        // through the line (start -> next line's start). Read in the draw phase only.
+        Text(
+            text = text,
+            modifier = Modifier.fillMaxWidth(),
+            style = if (karaoke) style.copy(color = color.copy(alpha = 0.3f)) else style,
+            textAlign = TextAlign.Start
+        )
+        if (karaoke && positionMillis != null) {
+            Text(
+                text = text,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clearAndSetSemantics { }
+                    .drawWithContent {
+                        val end = lineEnd?.takeIf { it > lineStart } ?: (lineStart + LAST_LINE_MILLIS)
+                        val fraction = ((positionMillis() - lineStart).toFloat() / (end - lineStart).toFloat())
+                            .coerceIn(0f, 1f)
+                        clipRect(right = size.width * fraction) {
+                            this@drawWithContent.drawContent()
+                        }
+                    },
+                style = style,
+                textAlign = TextAlign.Start
+            )
+        }
+    }
 }
+
+/** How long the last line "lasts" for the fill, since no next line marks its end. */
+private const val LAST_LINE_MILLIS = 4_000L
 
 /** Fades the top and bottom [fade] of the content to transparent. */
 private fun Modifier.fadingEdges(fade: Dp): Modifier = this

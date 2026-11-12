@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -45,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowPlacement
 import org.spotube.spotube.core.systemtray.SystemTrayService
 import org.spotube.spotube.modules.settings.SettingsProvider
+import org.spotube.spotube.modules.shell.LocalAppShellTopInset
 import org.spotube.spotube.resources.iconsax.FluentDismiss
 import org.spotube.spotube.resources.iconsax.FluentMaximize
 import org.spotube.spotube.resources.iconsax.FluentMinus
@@ -71,6 +73,10 @@ actual fun ApplicationMainBar(
     actions: @Composable (RowScope.() -> Unit),
     backButton: Boolean,
     transparent: Boolean) {
+    // Wide (floating glass) shell: the room light shows through, so no panel band or separator,
+    // and the shell's own floating back button replaces the bar's.
+    val wide = LocalAppShellTopInset.current > 0.dp
+    val clear = transparent || wide
     Box(
         modifier = Modifier.fillMaxWidth()
             .windowDragArea(doubleClickAction = WindowDoubleClickAction.ToggleMaximize)
@@ -84,18 +90,35 @@ actual fun ApplicationMainBar(
                 Spacer(Modifier.width(WindowControlsReservedWidth))
             },
             navigationIcon = {
-                if (backButton) {
+                if (backButton && !wide) {
                     ApplicationBackButton()
                 }
             },
             subtitle = subtitle,
-            background = if (transparent) SolidColor(Color.Transparent) else null,
-            separatorColor = if (transparent) Color.Transparent else null,
+            background = if (clear) SolidColor(Color.Transparent) else null,
+            separatorColor = if (clear) Color.Transparent else null,
             modifier = Modifier.fillMaxWidth()
         )
         LocalWindowScope.current.WindowControls(
             modifier = Modifier.align(Alignment.TopEnd).heightIn(max = 48.dp),
             renderer = WindowControlsRenderer.Platform, // default
+        )
+    }
+}
+
+@Composable
+actual fun WindowChromeBand(modifier: Modifier) {
+    val height = LocalAppShellTopInset.current
+    if (height <= 0.dp) return
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(height)
+            .windowDragArea(doubleClickAction = WindowDoubleClickAction.ToggleMaximize)
+    ) {
+        LocalWindowScope.current.WindowControls(
+            modifier = Modifier.align(Alignment.TopEnd).heightIn(max = 48.dp),
+            renderer = WindowControlsRenderer.Platform,
         )
     }
 }

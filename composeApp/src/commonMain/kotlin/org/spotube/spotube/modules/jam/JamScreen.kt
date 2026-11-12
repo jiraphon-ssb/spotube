@@ -64,6 +64,11 @@ import org.spotube.spotube.core.ui.component.ApplicationMainBar
 import org.spotube.spotube.core.ui.theming.AppTheme
 import org.spotube.spotube.modules.settings.sections.JamNameSettingCard
 import org.spotube.spotube.modules.shell.LocalAppShellBottomInset
+import org.spotube.spotube.modules.settings.components.GlassCardShape
+import org.spotube.spotube.modules.settings.components.GlassPageHeader
+import org.spotube.spotube.modules.settings.components.glassSurface
+import org.spotube.spotube.modules.settings.components.isWideShellLayout
+import org.spotube.spotube.modules.shell.LocalAppShellTopInset
 import org.spotube.spotube.resources.iconsax.Iconsax
 import org.spotube.spotube.resources.iconsax.IconsaxSetting2
 import org.jetbrains.compose.resources.stringResource
@@ -81,7 +86,6 @@ import org.spotube.millennium.composables.MillenniumTextField
 import org.spotube.millennium.composables.MillenniumTooltip
 import org.spotube.millennium.theme.MillenniumTheme
 import org.spotube.millennium.theme.millenniumBevelBrush
-import org.spotube.millennium.theme.millenniumPanelBrush
 import org.spotube.millennium.theme.millenniumSurface
 import spotube.composeapp.generated.resources.*
 
@@ -92,8 +96,23 @@ fun JamScreen(navigationCommands: NavigationCommands) {
     val clipboard = LocalClipboardManager.current
     val shellBottomInset = LocalAppShellBottomInset.current
 
-    Column(Modifier.fillMaxSize().background(MillenniumTheme.colors.background)) {
-        ApplicationMainBar(title = { Text(stringResource(Res.string.jam_screen_title)) })
+    val wide = isWideShellLayout()
+    Column(
+        Modifier.fillMaxSize()
+            // The wide shell draws the room light behind pages; only the compact one needs a canvas.
+            .then(if (wide) Modifier else Modifier.background(MillenniumTheme.colors.background))
+            .padding(top = LocalAppShellTopInset.current)
+    ) {
+        if (wide) {
+            Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp), contentAlignment = Alignment.TopCenter) {
+                GlassPageHeader(
+                    title = stringResource(Res.string.jam_screen_title),
+                    modifier = Modifier.widthIn(max = 520.dp)
+                )
+            }
+        } else {
+            ApplicationMainBar(title = { Text(stringResource(Res.string.jam_screen_title)) })
+        }
         Column(
             Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
@@ -158,13 +177,7 @@ fun JamScreen(navigationCommands: NavigationCommands) {
 @Composable
 private fun JamPanel(content: @Composable ColumnScope.() -> Unit) {
     Column(
-        Modifier.fillMaxWidth().millenniumSurface(
-            background = millenniumPanelBrush(MillenniumTheme.colors),
-            shape = RoundedCornerShape(10.dp),
-            borderColor = MillenniumTheme.colors.border,
-            borderWidth = 1.dp,
-            innerGlowColor = MillenniumTheme.colors.highlight.copy(alpha = 0.25f)
-        ).padding(16.dp),
+        Modifier.fillMaxWidth().glassSurface(AppTheme.colors, GlassCardShape).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
         content = content
     )

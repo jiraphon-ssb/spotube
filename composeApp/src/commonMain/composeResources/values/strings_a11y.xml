@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Accessibility labels and state text for shared UI components. -->
+<resources>
+    <string name="a11y_play_item">Play %1$s</string>
+    <string name="a11y_select_track">Select %1$s</string>
+    <string name="a11y_no_match">No tracks match “%1$s”</string>
+    <string name="a11y_clear_filter">Clear filter</string>
+    <string name="a11y_now_playing">Now playing</string>
+    <string name="a11y_on">On</string>
+    <string name="a11y_off">Off</string>
+    <string name="a11y_seek_to_line">Play from this line</string>
+</resources>

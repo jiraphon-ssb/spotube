@@ -22,6 +22,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -47,6 +49,10 @@ import org.spotube.spotube.core.ui.component.LoginRequiredDisplay
 import org.spotube.spotube.modules.plugin.MetadataAuthViewModel
 import org.spotube.spotube.core.ui.theming.AppTheme
 import org.spotube.spotube.modules.shell.LocalAppShellBottomInset
+import org.spotube.spotube.modules.settings.components.GlassCardShape
+import org.spotube.spotube.modules.settings.components.glassSurface
+import org.spotube.spotube.modules.settings.components.isWideShellLayout
+import org.spotube.spotube.modules.shell.LocalAppShellTopInset
 import org.spotube.spotube.resources.iconsax.Iconsax
 import org.spotube.spotube.resources.iconsax.IconsaxAdd
 import org.spotube.spotube.resources.iconsax.IconsaxBoxAdd
@@ -57,7 +63,6 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.spotube.millennium.composables.MillenniumButton
 import org.spotube.millennium.composables.MillenniumButtonStyle
-import org.spotube.millennium.composables.MillenniumCard
 import org.spotube.millennium.composables.MillenniumIcon
 import org.spotube.millennium.theme.MillenniumTheme
 import spotube.composeapp.generated.resources.Res
@@ -93,12 +98,13 @@ fun MetadataPluginGuard(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val authState by authViewModel.uiState.collectAsStateWithLifecycle()
+    val canvas = guardCanvas()
 
     when (val s = state) {
         is MetadataPluginGuardState.Available ->
             if (requireLogin && authState.loginRequired) {
-                Column(Modifier.fillMaxSize().background(MillenniumTheme.colors.background)) {
-                    if (showTopBar) ApplicationMainBar(backButton = backButton)
+                Column(Modifier.fillMaxSize().then(canvas)) {
+                    GuardTopBar(showTopBar = showTopBar, backButton = backButton)
                     Box(
                         Modifier
                             .fillMaxSize()
@@ -116,13 +122,32 @@ fun MetadataPluginGuard(
                 content()
             }
         is MetadataPluginGuardState.Loading -> Box(
-            Modifier.fillMaxSize().background(MillenniumTheme.colors.background))
+            Modifier.fillMaxSize().then(canvas))
         is MetadataPluginGuardState.Missing -> NoMetadataPluginScreen(
             hasInstalledPlugins = s.hasInstalledPlugins,
             backButton = backButton,
             showTopBar = showTopBar,
             onOpenPlugins = viewModel::openPlugins,
             onOpenLocalTracks = viewModel::openLocalTracks)
+    }
+}
+
+/**
+ * The page canvas: transparent in the wide shell (the room light shows through), the theme
+ * background in the compact layout.
+ */
+@Composable
+private fun guardCanvas(): Modifier =
+    if (isWideShellLayout()) Modifier else Modifier.background(MillenniumTheme.colors.background)
+
+/** The page's own top bar: the app bar in the compact layout, room for the shell chrome in the wide one. */
+@Composable
+private fun GuardTopBar(showTopBar: Boolean, backButton: Boolean) {
+    if (!showTopBar) return
+    if (isWideShellLayout()) {
+        Spacer(Modifier.height(LocalAppShellTopInset.current))
+    } else {
+        ApplicationMainBar(backButton = backButton)
     }
 }
 
@@ -137,8 +162,8 @@ private fun NoMetadataPluginScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MillenniumTheme.colors.background)) {
-        if (showTopBar) ApplicationMainBar(backButton = backButton)
+            .then(guardCanvas())) {
+        GuardTopBar(showTopBar = showTopBar, backButton = backButton)
 
         Box(
             modifier = Modifier
@@ -171,12 +196,15 @@ private fun NoMetadataPluginScreen(
                     textAlign = TextAlign.Center)
 
                 if (!hasInstalledPlugins) {
-                    MillenniumCard(modifier = Modifier.fillMaxWidth()) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Step(1, Res.string.no_metadata_plugin_step_discover)
-                            Step(2, Res.string.no_metadata_plugin_step_install)
-                            Step(3, Res.string.no_metadata_plugin_step_select)
-                        }
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .glassSurface(AppTheme.colors, GlassCardShape)
+                            .padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Step(1, Res.string.no_metadata_plugin_step_discover)
+                        Step(2, Res.string.no_metadata_plugin_step_install)
+                        Step(3, Res.string.no_metadata_plugin_step_select)
                     }
                 }
 

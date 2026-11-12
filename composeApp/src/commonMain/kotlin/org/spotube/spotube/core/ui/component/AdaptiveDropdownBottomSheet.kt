@@ -43,7 +43,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import com.composeunstyled.LocalContentColor
+import com.composeunstyled.LocalTextStyle
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.composeunstyled.currentWindowWidthBreakpoint
+import org.spotube.millennium.theme.MillenniumColorSchemes
 import org.spotube.millennium.theme.MillenniumTheme
 import org.spotube.millennium.adaptive.WindowBreakpoints
 import androidx.compose.ui.tooling.preview.Preview
@@ -300,34 +305,78 @@ private fun DesktopDropdownMenu(
     val hasLeading = items.any { it.icon != null || it.leadingContent != null }
     val iconSize = MillenniumTheme.dropdownMenuTheme.states.default.iconSize
 
-    MillenniumDropdownMenu(
-        expanded = expanded,
-        onExpandedChange = onExpandedChange,
-        minimumWidth = menuMinWidth,
-        width = menuMinWidth,
-        anchor = trigger) {
-        if (filter != null) {
-            MillenniumDropdownMenuHeader(showDivider = false) {
-                MillenniumDropdownMenuFilter(
-                    state = queryState,
-                    placeholder = stringResource(Res.string.search_filter_placeholder))
-            }
+    // Millennium paints the hovered/focused row with the accent gel (accentTop/accentBottom) and
+    // tints its label and icon onAccent: a full ice-blue bar with navy ink. Re-map those roles for
+    // the menu so the active row is the flat hover plate with text-coloured label and icon.
+    // Destructive rows are unaffected: Millennium gives them the danger tint and danger foreground.
+    val baseConfig = MillenniumTheme.config
+    val baseColors = MillenniumTheme.colors
+    val hoverPlate = AppTheme.colors.hover
+    val menuConfig = remember(baseConfig, baseColors, hoverPlate) {
+        val menuColors = baseColors.copy(
+            accentTop = hoverPlate,
+            accentBottom = hoverPlate,
+            onAccent = baseColors.text
+        )
+        baseConfig.copy(
+            colorSchemes = MillenniumColorSchemes(
+                light = menuColors,
+                dark = menuColors,
+                orangeLight = menuColors,
+                orangeDark = menuColors,
+                limeLight = menuColors,
+                limeDark = menuColors
+            )
+        )
+    }
+
+    // The remapped theme is for the menu rows only. MillenniumDropdownMenu composes the anchor
+    // inside it too, so hand the trigger back the caller's theme, text style, content colour and
+    // indication (MillenniumTheme resets all of those) to keep its accent colours and type.
+    val outerTextStyle = LocalTextStyle.current
+    val outerContentColor = LocalContentColor.current
+    val outerIndication = LocalIndication.current
+    val anchor: @Composable () -> Unit = {
+        MillenniumTheme(dark = true, config = baseConfig) {
+            CompositionLocalProvider(
+                LocalTextStyle provides outerTextStyle,
+                LocalContentColor provides outerContentColor,
+                LocalIndication provides outerIndication,
+                content = trigger)
         }
-        MillenniumDropdownMenuContent {
-            if (visibleItems.isEmpty()) {
-                MillenniumDropdownMenuEmpty(stringResource(Res.string.common_no_results))
+    }
+
+    // Spotube runs Millennium dark-only (SpotubeTheme), so the nested theme is dark as well.
+    MillenniumTheme(dark = true, config = menuConfig) {
+        MillenniumDropdownMenu(
+            expanded = expanded,
+            onExpandedChange = onExpandedChange,
+            minimumWidth = menuMinWidth,
+            width = menuMinWidth,
+            anchor = anchor) {
+            if (filter != null) {
+                MillenniumDropdownMenuHeader(showDivider = false) {
+                    MillenniumDropdownMenuFilter(
+                        state = queryState,
+                        placeholder = stringResource(Res.string.search_filter_placeholder))
+                }
             }
-            visibleItems.forEach { item ->
-                if (item.dividerBefore) MillenniumDropdownMenuSeparator()
-                MillenniumDropdownMenuItem(
-                    onClick = item.onClick,
-                    enabled = item.enabled,
-                    selected = item.selected,
-                    leading = item.leadingContent
-                        ?: item.icon?.let { icon -> { MillenniumDropdownMenuItemIcon(icon) } }
-                        ?: if (hasLeading) ({ Spacer(Modifier.size(iconSize)) }) else null,
-                    description = item.subtitle?.let { subtitle -> { Text(subtitle) } }) {
-                    Text(item.label)
+            MillenniumDropdownMenuContent {
+                if (visibleItems.isEmpty()) {
+                    MillenniumDropdownMenuEmpty(stringResource(Res.string.common_no_results))
+                }
+                visibleItems.forEach { item ->
+                    if (item.dividerBefore) MillenniumDropdownMenuSeparator()
+                    MillenniumDropdownMenuItem(
+                        onClick = item.onClick,
+                        enabled = item.enabled,
+                        selected = item.selected,
+                        leading = item.leadingContent
+                            ?: item.icon?.let { icon -> { MillenniumDropdownMenuItemIcon(icon) } }
+                            ?: if (hasLeading) ({ Spacer(Modifier.size(iconSize)) }) else null,
+                        description = item.subtitle?.let { subtitle -> { Text(subtitle) } }) {
+                        Text(item.label)
+                    }
                 }
             }
         }

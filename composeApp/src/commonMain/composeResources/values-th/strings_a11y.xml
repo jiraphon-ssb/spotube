@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Accessibility labels and state text for shared UI components. -->
+<resources>
+    <string name="a11y_play_item">เล่น %1$s</string>
+    <string name="a11y_select_track">เลือก %1$s</string>
+    <string name="a11y_no_match">ไม่มีเพลงที่ตรงกับ “%1$s”</string>
+    <string name="a11y_clear_filter">ล้างตัวกรอง</string>
+    <string name="a11y_now_playing">กำลังเล่น</string>
+    <string name="a11y_on">เปิด</string>
+    <string name="a11y_off">ปิด</string>
+    <string name="a11y_seek_to_line">เล่นจากบรรทัดนี้</string>
+</resources>

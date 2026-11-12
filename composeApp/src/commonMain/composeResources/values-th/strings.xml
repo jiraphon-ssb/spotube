@@ -158,9 +158,9 @@
     <string name="settings_palette_dialog_description">เลือกสีเน้นที่ใช้กับปุ่ม เครื่องเล่น และจุดไฮไลต์</string>
     <string name="settings_palette_label">ชุดสี</string>
     <string name="settings_appearance_subtitle_palette">ชุดสีและสีเน้น Millennium ปัจจุบัน: %1$s</string>
-    <string name="settings_palette_blue">แดงสติกเกอร์</string>
-    <string name="settings_palette_orange">คราฟท์</string>
-    <string name="settings_palette_lime">เหลืองป้ายแนะนำ</string>
+    <string name="settings_palette_blue">ฟ้าน้ำแข็ง</string>
+    <string name="settings_palette_orange">ฟ้าอมเขียว</string>
+    <string name="settings_palette_lime">เงิน</string>
 
     <string name="settings_download_folder_title">กำหนดโฟลเดอร์ดาวน์โหลดเอง</string>
     <string name="settings_download_folder_current">โฟลเดอร์ปัจจุบัน: %1$s</string>
@@ -931,6 +931,7 @@
     <string name="search_remove_recent">ลบ %1$s ออกจากการค้นหาล่าสุด</string>
     <string name="search_idle_title">หาเพลงที่อยากฟัง</string>
     <string name="search_idle_body">ค้นหาเพลง ศิลปิน อัลบั้ม และเพลย์ลิสต์</string>
-    <string name="featured_crate_position">แผ่นที่ %1$d จาก %2$d ในลังนี้</string>
-    <string name="featured_crate_hint">เลื่อนเมาส์หรือกดลูกศรเพื่อพลิก</string>
+    <string name="home_more_picks">แนะนำเพิ่มเติม</string>
+    <string name="featured_previous">รายการแนะนำก่อนหน้า</string>
+    <string name="featured_next">รายการแนะนำถัดไป</string>
 </resources>

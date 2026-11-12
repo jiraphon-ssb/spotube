@@ -18,6 +18,13 @@
 package org.spotube.spotube.core.ui.component
 
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.unit.dp
+import org.spotube.spotube.modules.shell.LocalAppShellTopInset
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
 import org.spotube.millennium.composables.MillenniumTopAppBar
@@ -31,15 +38,27 @@ actual fun ApplicationMainBar(
     actions: @Composable (RowScope.() -> Unit),
     backButton: Boolean,
     transparent: Boolean) {
+    // Wide (floating glass) shell: no panel band, and the shell's back button replaces the bar's.
+    val wide = LocalAppShellTopInset.current > 0.dp
+    val clear = transparent || wide
     return MillenniumTopAppBar(
         title = title,
         subtitle = subtitle,
         actions = actions,
         windowInsets = WindowInsets.statusBars,
         navigationIcon = {
-            if (backButton) {
+            if (backButton && !wide) {
                 ApplicationBackButton()
             }
-        }
+        },
+        background = if (clear) SolidColor(Color.Transparent) else null,
+        separatorColor = if (clear) Color.Transparent else null
     )
+}
+
+@Composable
+actual fun WindowChromeBand(modifier: Modifier) {
+    val height = LocalAppShellTopInset.current
+    if (height <= 0.dp) return
+    Spacer(modifier.fillMaxWidth().height(height))
 }

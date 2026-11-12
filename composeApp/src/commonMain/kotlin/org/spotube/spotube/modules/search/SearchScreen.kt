@@ -18,16 +18,8 @@
 package org.spotube.spotube.modules.search
 
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
+import org.spotube.spotube.core.ui.component.WindowChromeBand
+import org.spotube.spotube.core.ui.component.cards.isWideShell
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -49,7 +41,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -61,9 +52,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import org.spotube.spotube.core.ui.component.PillChipRow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -72,7 +65,6 @@ import com.composeunstyled.currentWindowWidthBreakpoint
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
@@ -80,9 +72,9 @@ import org.spotube.millennium.adaptive.WindowBreakpoints
 import org.spotube.millennium.composables.MillenniumAutocomplete
 import org.spotube.millennium.composables.MillenniumButton
 import org.spotube.millennium.composables.MillenniumButtonStyle
+import org.spotube.millennium.composables.MillenniumCircularProgress
 import org.spotube.millennium.composables.MillenniumIcon
 import org.spotube.millennium.composables.MillenniumListTile
-import org.spotube.millennium.composables.MillenniumMarqueeProgress
 import org.spotube.millennium.composables.MillenniumText
 import org.spotube.millennium.theme.MillenniumTheme
 import org.spotube.plugin_interfaces.plugin_apis.metadata.album.MetadataAlbum
@@ -109,7 +101,6 @@ import org.spotube.spotube.core.ui.component.TrackOptionsAction
 import org.spotube.spotube.core.ui.component.TrackOptionsState
 import org.spotube.spotube.core.ui.component.UserCard
 import org.spotube.spotube.core.ui.component.cards.PlayableCard
-import org.spotube.spotube.core.ui.component.dragScrollable
 import org.spotube.spotube.core.ui.misc.SkeletonTree
 import org.spotube.spotube.core.ui.theming.AppTheme
 import org.spotube.spotube.getPlatform
@@ -120,7 +111,6 @@ import org.spotube.spotube.modules.library.LibraryRepository
 import org.spotube.spotube.modules.library.playlist.AddToPlaylistPicker
 import org.spotube.spotube.modules.shell.LocalAppShellBottomInset
 import org.spotube.spotube.resources.iconsax.Iconsax
-import org.spotube.spotube.resources.iconsax.IconsaxSearchBroken
 import org.spotube.spotube.resources.iconsax.IconsaxTrash
 import org.spotube.spotube.resources.iconsax.InconsaxClock
 import spotube.composeapp.generated.resources.Res
@@ -158,13 +148,6 @@ import spotube.composeapp.generated.resources.search_see_all
 import spotube.composeapp.generated.resources.search_start_typing
 import spotube.composeapp.generated.resources.search_start_typing_tracks
 import spotube.composeapp.generated.resources.search_tab_all
-import spotube.composeapp.generated.resources.search_warm_antennas
-import spotube.composeapp.generated.resources.search_warm_cosmos
-import spotube.composeapp.generated.resources.search_warm_crates
-import spotube.composeapp.generated.resources.search_warm_music_gods
-import spotube.composeapp.generated.resources.search_warm_records
-import spotube.composeapp.generated.resources.search_warm_speakers
-import spotube.composeapp.generated.resources.search_warm_vinyl
 
 private val GridMinCellSize = 180.dp
 
@@ -327,12 +310,17 @@ fun SearchScreen(viewModel: SearchScreenViewModel = koinViewModel()) {
         remotePlaybackController.requestTracksPlayNext(tracks, searchResultsTitle)
     }
 
+    // Wide glass shell: no opaque canvas (the room light shows through); the window strip under
+    // the floating chrome replaces the empty title bar.
+    val wide = isWideShell()
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MillenniumTheme.colors.background)
+            .then(if (wide) Modifier else Modifier.background(MillenniumTheme.colors.background))
             .windowInsetsPadding(WindowInsets.statusBars)
     ) {
+        // Wide shell: the band under the floating chrome (drag strip + top inset).
+        if (wide) WindowChromeBand()
         if (!isExpanded) {
             SearchBar(
                 query = state.query,
@@ -347,7 +335,7 @@ fun SearchScreen(viewModel: SearchScreenViewModel = koinViewModel()) {
                     focusManager.clearFocus()
                 },
             )
-        } else {
+        } else if (!wide) {
             ApplicationMainBar(backButton = false)
         }
         Column(
@@ -438,6 +426,7 @@ fun SearchScreen(viewModel: SearchScreenViewModel = koinViewModel()) {
                         onArtistsOverflowClick = { track ->
                             // No-op for now, could show a dialog with all artists
                         },
+                        onRetry = viewModel::retry,
                         modifier = Modifier
                             .fillMaxSize()
                     )
@@ -480,6 +469,7 @@ fun SearchScreen(viewModel: SearchScreenViewModel = koinViewModel()) {
                         query = state.query,
                         playlists = state.playlists,
                         onLoadNextPage = viewModel::loadNextPlaylists,
+                        onRetry = viewModel::retry,
                         modifier = Modifier
                             .fillMaxSize()
                     )
@@ -490,6 +480,7 @@ fun SearchScreen(viewModel: SearchScreenViewModel = koinViewModel()) {
                         query = state.query,
                         albums = state.albums,
                         onLoadNextPage = viewModel::loadNextAlbums,
+                        onRetry = viewModel::retry,
                         modifier = Modifier
                             .fillMaxSize()
                     )
@@ -500,6 +491,7 @@ fun SearchScreen(viewModel: SearchScreenViewModel = koinViewModel()) {
                         query = state.query,
                         artists = state.artists,
                         onLoadNextPage = viewModel::loadNextArtists,
+                        onRetry = viewModel::retry,
                         modifier = Modifier
                             .fillMaxSize()
                     )
@@ -510,6 +502,7 @@ fun SearchScreen(viewModel: SearchScreenViewModel = koinViewModel()) {
                         query = state.query,
                         users = state.users,
                         onLoadNextPage = viewModel::loadNextUsers,
+                        onRetry = viewModel::retry,
                         modifier = Modifier
                             .fillMaxSize()
                     )
@@ -607,27 +600,13 @@ private fun SearchTabs(
     selectedType: MetadataSupportedSearchType?,
     onTabSelected: (MetadataSupportedSearchType) -> Unit
 ) {
-    val listState = rememberLazyListState()
-    LazyRow(
-        state = listState,
-        modifier = Modifier.fillMaxWidth().dragScrollable(listState),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        items(types) { type ->
-            val isSelected = selectedType == type
-            MillenniumButton(
-                onClick = { onTabSelected(type) },
-                style = if (isSelected) {
-                    MillenniumButtonStyle.Primary
-                } else {
-                    MillenniumButtonStyle.Secondary
-                }
-            ) {
-                Text(type.tabTitle())
-            }
-        }
-    }
+    PillChipRow(
+        labels = types.map { it.tabTitle() },
+        selectedIndex = selectedType?.let { types.indexOf(it) } ?: -1,
+        onSelect = { onTabSelected(types[it]) },
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
+    )
 }
 
 @Composable
@@ -657,6 +636,7 @@ private fun SearchAllTab(
     onArtistClick: (MetadataArtist.Basic) -> Unit,
     onAlbumClick: (MetadataAlbum.Detailed) -> Unit,
     onArtistsOverflowClick: (MetadataTrack) -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (query.isBlank()) {
@@ -687,7 +667,7 @@ private fun SearchAllTab(
     if (!hasAnyContent && !isLoadingAll && hasAnyError != null) {
         ErrorDisplay(
             errorMessage = hasAnyError,
-            onRetry = { },
+            onRetry = onRetry,
             modifier = modifier
         )
         return
@@ -728,8 +708,8 @@ private fun SearchAllTab(
             if (showTracks) {
                 Text(
                     text = stringResource(Res.string.search_section_tracks),
-                    style = AppTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
+                    style = SearchSectionTitleStyle(),
+                    color = AppTheme.colors.onSurface,
                     modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 12.dp)
                 )
             }
@@ -851,6 +831,7 @@ private fun SearchAlbumsTab(
     query: String,
     albums: SearchPagedState<MetadataAlbum.Basic>,
     onLoadNextPage: () -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     SearchGridTab(
@@ -860,6 +841,7 @@ private fun SearchAlbumsTab(
         error = albums.error,
         hasNextPage = albums.hasNextPage,
         onLoadNextPage = onLoadNextPage,
+        onRetry = onRetry,
         emptyMessage = stringResource(Res.string.search_no_albums),
         loadingMessage = stringResource(Res.string.search_loading_albums),
         modifier = modifier
@@ -873,6 +855,7 @@ private fun SearchArtistsTab(
     query: String,
     artists: SearchPagedState<MetadataArtist.Basic>,
     onLoadNextPage: () -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     SearchGridTab(
@@ -882,6 +865,7 @@ private fun SearchArtistsTab(
         error = artists.error,
         hasNextPage = artists.hasNextPage,
         onLoadNextPage = onLoadNextPage,
+        onRetry = onRetry,
         emptyMessage = stringResource(Res.string.search_no_artists),
         loadingMessage = stringResource(Res.string.search_loading_artists),
         modifier = modifier
@@ -895,6 +879,7 @@ private fun SearchPlaylistsTab(
     query: String,
     playlists: SearchPagedState<MetadataPlaylist>,
     onLoadNextPage: () -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     SearchGridTab(
@@ -904,6 +889,7 @@ private fun SearchPlaylistsTab(
         error = playlists.error,
         hasNextPage = playlists.hasNextPage,
         onLoadNextPage = onLoadNextPage,
+        onRetry = onRetry,
         emptyMessage = stringResource(Res.string.search_no_playlists),
         loadingMessage = stringResource(Res.string.search_loading_playlists),
         modifier = modifier
@@ -917,6 +903,7 @@ private fun SearchUsersTab(
     query: String,
     users: SearchPagedState<MetadataUser>,
     onLoadNextPage: () -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     SearchGridTab(
@@ -926,6 +913,7 @@ private fun SearchUsersTab(
         error = users.error,
         hasNextPage = users.hasNextPage,
         onLoadNextPage = onLoadNextPage,
+        onRetry = onRetry,
         emptyMessage = stringResource(Res.string.search_no_users),
         loadingMessage = stringResource(Res.string.search_loading_users),
         modifier = modifier
@@ -943,6 +931,7 @@ private fun <T> SearchGridTab(
     error: String?,
     hasNextPage: Boolean,
     onLoadNextPage: () -> Unit,
+    onRetry: () -> Unit,
     emptyMessage: String,
     loadingMessage: String,
     modifier: Modifier = Modifier,
@@ -981,7 +970,8 @@ private fun <T> SearchGridTab(
         error != null && items.isEmpty() -> {
             ErrorDisplay(
                 errorMessage = error,
-                onRetry = onLoadNextPage,
+                // Nothing loaded yet, so there is no next page to fetch: re-run the query.
+                onRetry = onRetry,
                 modifier = modifier
             )
         }
@@ -1038,8 +1028,8 @@ private fun SearchHorizontalSection(
         ) {
             Text(
                 text = title,
-                style = AppTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
+                style = SearchSectionTitleStyle(),
+                color = AppTheme.colors.onSurface
             )
 
             Text(
@@ -1105,94 +1095,35 @@ private fun SearchTrackRow(
     }
 }
 
-private val WarmSearchMessages: List<StringResource> = listOf(
-    Res.string.search_warm_crates,
-    Res.string.search_warm_cosmos,
-    Res.string.search_warm_speakers,
-    Res.string.search_warm_vinyl,
-    Res.string.search_warm_music_gods,
-    Res.string.search_warm_antennas,
-    Res.string.search_warm_records
-)
-
+/**
+ * A calm, static-text loader: a small ring and one muted line. No cycling copy, so nothing
+ * recomposes per frame beyond the ring itself.
+ */
 @Composable
 private fun SearchLoadingIndicator(
     message: String? = null,
     modifier: Modifier = Modifier
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "search-loading")
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1500, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "icon-rotation"
-    )
-    val bounce by infiniteTransition.animateFloat(
-        initialValue = -8f,
-        targetValue = 8f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 800, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "icon-bounce"
-    )
-    val messageIndex by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = WarmSearchMessages.size.toFloat(),
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = WarmSearchMessages.size * 2000,
-                easing = LinearEasing
-            ),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "message-cycle"
-    )
-    val displayMessage =
-        message ?: stringResource(WarmSearchMessages[messageIndex.toInt() % WarmSearchMessages.size])
-
+    val label = message ?: stringResource(Res.string.search_searching)
     Column(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically)
     ) {
-        Box(
-            modifier = Modifier.size(64.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            MillenniumIcon(
-                imageVector = Iconsax.IconsaxSearchBroken,
-                contentDescription = stringResource(Res.string.search_searching),
-                tint = AppTheme.colors.primary,
-                modifier = Modifier
-                    .size(48.dp)
-                    .graphicsLayer {
-                        rotationZ = rotation
-                        translationY = bounce
-                    })
-        }
-        MillenniumMarqueeProgress(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 32.dp, vertical = 16.dp)
+        MillenniumCircularProgress(
+            size = 20.dp,
+            thickness = 2.dp,
+            color = AppTheme.colors.onSurfaceVariant,
+            contentDescription = label
         )
-        AnimatedContent(
-            targetState = displayMessage,
-            transitionSpec = {
-                fadeIn(tween(300)) togetherWith fadeOut(tween(300))
-            },
-            label = "message-transition"
-        ) { msg ->
-            Text(
-                text = msg,
-                color = AppTheme.colors.onSurfaceVariant,
-                style = AppTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center
-            )
-        }
+        Text(
+            text = label,
+            color = AppTheme.colors.onSurfaceVariant,
+            style = AppTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
@@ -1349,3 +1280,8 @@ private fun MetadataSupportedSearchType.tabTitle(): String = when (this) {
     MetadataSupportedSearchType.ARTIST -> stringResource(Res.string.library_tab_artists)
     MetadataSupportedSearchType.USER -> stringResource(Res.string.search_section_users)
 }
+
+/** Section titles: 20/28 Bold, tightened; same as Home shelves and Artist sections. */
+@Composable
+private fun SearchSectionTitleStyle(): TextStyle =
+    AppTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, letterSpacing = (-0.3).sp)

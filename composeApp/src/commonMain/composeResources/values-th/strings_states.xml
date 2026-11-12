@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Empty, unavailable and partial-failure states (lyrics, home). -->
+<resources>
+    <string name="lyrics_nothing_playing_title">ยังไม่มีเพลงที่เล่นอยู่</string>
+    <string name="lyrics_nothing_playing_body">เปิดเพลงสักเพลง แล้วเนื้อเพลงจะขึ้นตรงนี้</string>
+    <string name="lyrics_local_title">ไฟล์ในเครื่องไม่มีเนื้อเพลง</string>
+    <string name="lyrics_local_body">เนื้อเพลงมาจากปลั๊กอิน ซึ่งรองรับเฉพาะเพลงที่สตรีมเท่านั้น</string>
+    <string name="lyrics_no_plugin_title">ยังไม่มีปลั๊กอินเนื้อเพลง</string>
+    <string name="lyrics_no_plugin_body">ติดตั้งหรือเลือกปลั๊กอินเนื้อเพลง เพื่อดูเนื้อเพลงของเพลงที่กำลังเล่น</string>
+    <string name="lyrics_action_browse_plugins">ไปที่ปลั๊กอิน</string>
+    <string name="lyrics_error_title">โหลดเนื้อเพลงไม่สำเร็จ</string>
+    <string name="lyrics_action_show_plain">ดูเนื้อเพลงแบบธรรมดา</string>
+
+    <string name="home_empty_title">ยังไม่มีอะไรให้เลือกดู</string>
+    <string name="home_empty_body">ปลั๊กอินข้อมูลเพลงไม่ได้ส่งรายการใดกลับมา ลองอีกครั้ง หรือเปลี่ยนปลั๊กอินในการตั้งค่า</string>
+    <string name="home_load_more_failed">โหลดเพิ่มไม่สำเร็จ</string>
+</resources>

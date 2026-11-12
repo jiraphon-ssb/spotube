@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Wide-layout shell: top navigation capsule, "other" menu, player dock, toasts, overlays. -->
+<resources>
+    <string name="shell_nav_home">หน้าแรก</string>
+    <string name="shell_nav_library">คลังเพลง</string>
+    <string name="shell_nav_stats">สถิติ</string>
+    <string name="shell_nav_search">ค้นหา</string>
+    <string name="shell_back">ย้อนกลับ</string>
+
+    <string name="shell_menu_open">เมนูอื่นๆ</string>
+    <string name="shell_menu_settings">ตั้งค่า</string>
+    <string name="shell_menu_downloads">ดาวน์โหลด</string>
+    <string name="shell_menu_downloads_active">ดาวน์โหลด กำลังโหลด %1$d รายการ</string>
+    <string name="shell_menu_plugins">ปลั๊กอิน</string>
+    <string name="shell_menu_devices">อุปกรณ์</string>
+    <string name="shell_menu_jam">Group Jam</string>
+    <string name="shell_menu_local_files">ไฟล์ในเครื่อง</string>
+    <string name="shell_menu_about">เกี่ยวกับ Spotube</string>
+
+    <string name="shell_dock_open_now_playing">เปิดหน้ากำลังเล่น</string>
+    <string name="shell_dock_nothing_playing">ยังไม่มีเพลงที่เล่นอยู่</string>
+    <string name="shell_dock_sound">เสียงและ EQ</string>
+    <string name="shell_dock_queue">คิว</string>
+    <string name="shell_dock_queue_count">คิว เหลืออีก %1$d เพลง</string>
+    <string name="shell_dock_lyrics">เนื้อเพลง</string>
+    <string name="shell_dock_mini">มินิเพลเยอร์</string>
+    <string name="shell_dock_exit_mini">กลับเป็นหน้าต่างเต็ม</string>
+    <string name="shell_dock_seek">เลื่อนตำแหน่งเพลง</string>
+
+    <string name="shell_toast_undo">เลิกทำ</string>
+
+    <string name="shell_overlay_close">ปิด</string>
+    <string name="shell_overlay_sound_title">เสียง</string>
+    <string name="shell_overlay_sound_soon">อีควอไลเซอร์ ตั้งเวลาปิด และความเร็วการเล่นจะมาอยู่ตรงนี้</string>
+    <string name="shell_overlay_palette_title">ค้นหาและคำสั่ง</string>
+    <string name="shell_overlay_palette_open_search">เปิดหน้าค้นหา</string>
+
+    <string name="shell_stats_title">สถิติการฟัง</string>
+    <string name="shell_stats_soon">ประวัติการฟังของคุณจะแสดงที่นี่เมื่อเริ่มฟังเพลง</string>
+</resources>

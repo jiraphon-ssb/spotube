@@ -176,8 +176,7 @@ internal fun LazyListScope.playbackSection(
         }
     }
 
-    if (includeHeader) {
-        settingsSectionHeader(Res.string.settings_section_playback)
-    }
-    settingsSectionCard(items = cards)
+    settingsSectionCard(
+        title = if (includeHeader) Res.string.settings_section_playback else null,
+        items = cards)
 }

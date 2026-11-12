@@ -24,10 +24,11 @@ import org.spotube.millennium.composables.MillenniumDialogClose
 import org.spotube.millennium.composables.MillenniumDialogBody
 import org.spotube.millennium.composables.MillenniumDialogFooter
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,7 +36,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import org.spotube.millennium.composables.MillenniumButton
 import org.spotube.millennium.composables.MillenniumButtonStyle
-import org.spotube.millennium.composables.MillenniumCard
 import org.spotube.millennium.composables.MillenniumDialog
 import org.spotube.millennium.composables.MillenniumIcon
 import org.spotube.millennium.composables.MillenniumIconButton
@@ -143,9 +143,14 @@ fun ErrorDisplay(
                 textAlign = TextAlign.Center)
         }
 
-        MillenniumCard(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(0.dp)) {
+        // Glass plate (translucent + hairline) so the shell's room light shows through.
+        val detailsShape = RoundedCornerShape(16.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(detailsShape)
+                .background(AppTheme.colors.surfaceContainerHigh)
+                .border(1.dp, AppTheme.colors.outline, detailsShape)) {
             Column(
                 modifier = Modifier.fillMaxWidth()) {
                 Row(
@@ -186,9 +191,12 @@ fun ErrorDisplay(
                     }
                 }
 
-                MillenniumCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(0.dp)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 8.dp, end = 8.dp, bottom = 8.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(AppTheme.colors.background.copy(alpha = 0.35f))) {
                     SelectionContainer {
                         Text(
                             text = errorMessage,

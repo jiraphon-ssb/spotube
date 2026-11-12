@@ -18,8 +18,6 @@
 package org.spotube.spotube.modules.settings
 
 
-import com.composeunstyled.currentWindowWidthBreakpoint
-import org.spotube.millennium.adaptive.WindowBreakpoints
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -39,7 +37,6 @@ import org.spotube.spotube.PlatformType
 import org.spotube.spotube.getPlatform
 import org.spotube.spotube.core.discovery.rememberLocalNetworkPermissionRequester
 import org.spotube.spotube.core.navigation.NavigationCommands
-import org.spotube.spotube.core.navigation.Routes
 import org.spotube.spotube.core.ui.component.ApplicationMainBar
 import spotube.composeapp.generated.resources.*
 import org.spotube.spotube.modules.settings.sections.appearanceSection
@@ -52,32 +49,21 @@ import org.spotube.spotube.modules.settings.sections.playbackSection
 import org.spotube.spotube.modules.settings.sections.pluginsSection
 import org.spotube.spotube.modules.settings.sections.supportSection
 import org.spotube.spotube.modules.settings.sections.updatesSection
+import org.spotube.spotube.modules.settings.components.isWideShellLayout
 import org.spotube.spotube.modules.shell.LocalAppShellBottomInset
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 
 /**
- * Minimum width of the settings content area required to show the settings as an
- * overlay dialog instead of a full-screen destination.
- */
-private val SettingsDialogMinWidth = 720.dp
-
-/**
- * On large screens settings is presented as a modal overlay so it does not sit next to
- * the main navigation sidebar. On smaller screens it stays a full-screen destination.
+ * Settings. In the wide (glass) shell it is a page with a section nav over the room light
+ * ([WideSettingsPage]); in the compact layout it stays a single scrolling list.
  */
 @Composable
 fun SettingsScreen(settingsViewModel: SettingsViewModel) {
-    val navigatorCommands: NavigationCommands = koinInject()
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        if (currentWindowWidthBreakpoint() isAtLeast WindowBreakpoints.Expanded) {
-            SettingsDialog(
-                settingsViewModel = settingsViewModel,
-                onDismiss = { navigatorCommands.pop(Routes.Settings) })
-        } else {
-            CompactSettingsScreen(settingsViewModel = settingsViewModel)
-        }
+    if (isWideShellLayout()) {
+        WideSettingsPage(settingsViewModel = settingsViewModel)
+    } else {
+        CompactSettingsScreen(settingsViewModel = settingsViewModel)
     }
 }
 

@@ -37,6 +37,7 @@ import org.spotube.spotube.modules.saved_tracks.SavedTracksScreen
 import org.spotube.spotube.modules.search.SearchScreen
 import org.spotube.spotube.modules.settings.SettingsScreen
 import org.spotube.spotube.modules.settings.JamSettingsScreen
+import org.spotube.spotube.modules.stats.StatsScreen
 import org.spotube.spotube.modules.welcome.WelcomeScreen
 import kotlinx.serialization.Serializable
 import org.koin.compose.viewmodel.koinViewModel
@@ -56,6 +57,10 @@ sealed interface Routes : NavKey {
 
     @Serializable
     data object Search : Routes
+
+    /** Listening stats (top-level, from the wide layout's nav capsule). */
+    @Serializable
+    data object Stats : Routes
 
     @Serializable
     data object Settings : Routes
@@ -115,6 +120,9 @@ val navigationModule = module {
         MetadataPluginGuard {
             SearchScreen()
         }
+    }
+    navigation<Routes.Stats> {
+        StatsScreen()
     }
     navigation<Routes.Library> {
         // Not guarded as a whole: Local tracks and Downloads work without a plugin.

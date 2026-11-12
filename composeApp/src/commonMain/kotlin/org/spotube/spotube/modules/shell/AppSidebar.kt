@@ -50,9 +50,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.composeunstyled.Text
 import org.spotube.spotube.NavigationItem
 import org.spotube.spotube.PlatformType
@@ -71,7 +75,6 @@ import org.spotube.spotube.resources.iconsax.IconsaxSetting2
 import org.spotube.spotube.resources.iconsax.IconsaxSidebarLeftBroken
 import org.spotube.spotube.resources.iconsax.IconsaxSidebarRightBroken
 import org.spotube.spotube.sidebarTabs
-import org.jetbrains.compose.resources.Font
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.spotube.millennium.composables.MillenniumIconButton
@@ -87,10 +90,45 @@ import org.spotube.millennium.composables.MillenniumSidebarItem
 import org.spotube.millennium.composables.MillenniumSidebarMenu
 import org.spotube.millennium.composables.MillenniumSidebarTrigger
 import spotube.composeapp.generated.resources.Res
-import spotube.composeapp.generated.resources.cookie_regular
 import spotube.composeapp.generated.resources.settings_screen_title
 import spotube.composeapp.generated.resources.support_button_label
 import spotube.composeapp.generated.resources.shell_sidebar_toggle_content_description
+
+/**
+ * The app's wordmark: a small accent square followed by "Spotube" in the app font. Sized by
+ * [fontSize] (18sp in chrome); the square, its radius, the gap and tracking scale with it.
+ */
+@Composable
+fun SpotubeWordmark(
+    modifier: Modifier = Modifier,
+    fontSize: TextUnit = 18.sp,
+    text: String = "Spotube"
+) {
+    val scale = fontSize.value / 18f
+    val markSize = with(LocalDensity.current) { (fontSize * (20f / 18f)).toDp() }
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(markSize * 0.45f),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            Modifier
+                .size(markSize)
+                .background(AppTheme.colors.primary, RoundedCornerShape(markSize * 0.3f))
+        )
+        Text(
+            text = text,
+            style = AppTheme.typography.titleMedium.copy(
+                fontSize = fontSize,
+                lineHeight = fontSize * 1.34f,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = (-0.3).sp * scale
+            ),
+            color = AppTheme.colors.onSurface,
+            maxLines = 1
+        )
+    }
+}
 
 /** Extra top space so the macOS close/minimise/zoom buttons (≈28pt title bar) clear the logo. */
 private val MacTrafficLightsInset = 18.dp
@@ -129,15 +167,7 @@ fun AppSidebar(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AnimatedVisibility(visible = expanded, enter = fadeIn(), exit = fadeOut()) {
-                    Text(
-                        text = "Spotube",
-                        style = AppTheme.typography.headlineLarge.copy(
-                            fontFamily = FontFamily(
-                                listOf(Font(Res.font.cookie_regular, weight = FontWeight.Normal))
-                            )
-                        ),
-                        color = AppTheme.colors.onSurface
-                    )
+                    SpotubeWordmark()
                 }
                 MillenniumSidebarTrigger {
                     MillenniumIconButton(

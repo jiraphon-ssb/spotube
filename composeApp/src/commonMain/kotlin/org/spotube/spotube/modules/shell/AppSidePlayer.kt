@@ -69,6 +69,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -100,6 +103,7 @@ import org.spotube.spotube.core.jam.JamRole
 import org.spotube.spotube.core.jam.JamRoomService
 import org.spotube.spotube.core.navigation.NavigationCommands
 import org.spotube.spotube.core.navigation.Routes
+import org.spotube.spotube.core.ui.component.keyboardFocusRing
 import org.spotube.spotube.core.ui.theming.AppTheme
 import org.spotube.spotube.modules.downloads.DownloadProgressIcon
 import org.spotube.spotube.modules.downloads.DownloadsViewModel
@@ -112,6 +116,8 @@ import org.spotube.spotube.resources.iconsax.IconsaxInformation
 import org.spotube.spotube.resources.iconsax.IconsaxMoon
 import org.spotube.spotube.resources.iconsax.IconsaxMusic
 import spotube.composeapp.generated.resources.Res
+import spotube.composeapp.generated.resources.a11y_off
+import spotube.composeapp.generated.resources.a11y_on
 import spotube.composeapp.generated.resources.player_alternative_source
 import spotube.composeapp.generated.resources.common_close
 import spotube.composeapp.generated.resources.player_alternative_source_content_description
@@ -377,36 +383,65 @@ fun AppSidePlayer(
 // Building blocks (shared with AppFullPlayer)
 // ---------------------------------------------------------------------------------------------
 
-/** Low-emphasis icon button: muted glyph, neutral hover plate, no border. */
+/**
+ * Low-emphasis icon button: muted glyph, neutral hover plate, no border.
+ *
+ * [active] makes it a toggle (`null` = plain button). A toggle that is on shows an accent glyph
+ * *and* a dot under it, and reports on/off to screen readers, so state isn't colour alone.
+ */
 @Composable
 internal fun QuietGlyphButton(
     icon: ImageVector,
     contentDescription: String,
     onClick: () -> Unit,
     enabled: Boolean = true,
-    active: Boolean = false,
+    active: Boolean? = null,
     tint: Color? = null,
     size: Dp = 36.dp,
     iconSize: Dp = 20.dp
 ) {
     val colors = AppTheme.colors
+    val toggleState = when (active) {
+        null -> null
+        true -> stringResource(Res.string.a11y_on)
+        false -> stringResource(Res.string.a11y_off)
+    }
     MillenniumIconButton(
         onClick = onClick,
         enabled = enabled,
+        modifier = if (toggleState != null) {
+            Modifier.semantics { stateDescription = toggleState }
+        } else {
+            Modifier
+        },
         style = MillenniumIconButtonStyle.Quiet,
         shape = RoundedCornerShape(10.dp),
         size = DpSize(size, size)
     ) {
-        MillenniumIcon(
-            icon,
-            contentDescription = contentDescription,
-            tint = when {
-                active -> colors.primary
-                tint != null -> tint
-                else -> colors.onSurfaceVariant
-            },
-            size = iconSize
-        )
+        Box(modifier = Modifier.size(size), contentAlignment = Alignment.Center) {
+            MillenniumIcon(
+                icon,
+                contentDescription = contentDescription,
+                tint = when {
+                    active == true -> colors.primary
+                    tint != null -> tint
+                    else -> colors.onSurfaceVariant
+                },
+                size = iconSize
+            )
+            if (active == true) {
+                // Centred in the gap between the glyph and the button's bottom edge.
+                val gap = (size - iconSize) / 2
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = ((gap - 4.dp) / 2).coerceAtLeast(1.dp))
+                        .size(4.dp)
+                        .clip(CircleShape)
+                        .background(colors.primary)
+                )
+            }
+        }
     }
 }
 
@@ -418,12 +453,19 @@ internal fun PlayerArtwork(
 ) {
     val colors = AppTheme.colors
     val albumId = player.currentTrack?.album?.id
+    val shape = AppTheme.shapes.large
     Box(
         modifier = modifier
             .aspectRatio(1f)
-            .clip(AppTheme.shapes.large)
+            .keyboardFocusRing(shape)
+            .clip(shape)
             .background(colors.surfaceContainerHigh)
-            .clickable(enabled = albumId != null) { albumId?.let(onOpenAlbum) }
+            .clickable(
+                enabled = albumId != null,
+                // The click opens the album, so that's what it announces.
+                onClickLabel = stringResource(Res.string.player_go_to_album),
+                role = Role.Button
+            ) { albumId?.let(onOpenAlbum) }
     ) {
         MillenniumIcon(
             Iconsax.IconsaxMusic,
@@ -434,7 +476,8 @@ internal fun PlayerArtwork(
         )
         AsyncImage(
             model = player.ui.coverModel,
-            contentDescription = player.ui.album,
+            // Decorative here: the title block names the track and album.
+            contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
@@ -513,7 +556,9 @@ internal fun PlayerSeekBar(player: PlayerController, modifier: Modifier = Modifi
 internal fun TransportRow(player: PlayerController, large: Boolean, modifier: Modifier = Modifier) {
     val colors = AppTheme.colors
     val ui = player.ui
-    val enabled = !player.isJamGuest
+    // Nothing loaded: transport has nothing to act on (play would just spin until the timeout).
+    val hasTrack = ui.currentQueueEntry != null
+    val enabled = !player.isJamGuest && hasTrack
     val button = if (large) 48.dp else 32.dp
     val glyph = if (large) 24.dp else 18.dp
     Row(
@@ -576,9 +621,14 @@ internal fun PlayKey(player: PlayerController, large: Boolean) {
     val colors = AppTheme.colors
     val ui = player.ui
     val keySize = if (large) 64.dp else 36.dp
-    val ink = colors.onAccentFill
+    val ink = if (large) colors.onAccentFill else colors.background
     MillenniumIconButton(
         onClick = player.onPlayPause,
+        // With no track, play has nothing to start and would spin until the 20s timeout. While
+        // loading (e.g. a collection into an empty queue) it stays pressable so it can cancel.
+        enabled = ui.currentQueueEntry != null || player.isLoading,
+        // The Quiet style's accent ring is invisible on an accent/white key; draw our own.
+        modifier = Modifier.keyboardFocusRing(CircleShape),
         style = MillenniumIconButtonStyle.Quiet,
         // The ring has no label of its own; while loading, the key acts as "pause".
         contentDescription = if (player.isLoading) {
@@ -586,7 +636,8 @@ internal fun PlayKey(player: PlayerController, large: Boolean) {
         } else {
             null
         },
-        background = colors.accentBrush,
+        // Transport bar: a quiet white key; full player: the accent.
+        background = if (large) colors.accentBrush else SolidColor(colors.onSurface),
         foreground = ink,
         shape = CircleShape,
         size = DpSize(keySize, keySize)
@@ -813,8 +864,9 @@ private fun UpNextSection(
                 style = AppTheme.typography.labelMedium,
                 color = colors.primary,
                 modifier = Modifier
+                    .keyboardFocusRing(AppTheme.shapes.small)
                     .clip(AppTheme.shapes.small)
-                    .clickable(onClick = onViewQueue)
+                    .clickable(role = Role.Button, onClick = onViewQueue)
                     .padding(horizontal = 6.dp, vertical = 4.dp)
             )
         }
@@ -841,6 +893,7 @@ private fun UpNextRow(item: UpNextItem, enabled: Boolean, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .keyboardFocusRing(AppTheme.shapes.small)
             .clip(AppTheme.shapes.small)
             .background(if (hovered && enabled) colors.hover else Color.Transparent)
             .hoverable(interactionSource)

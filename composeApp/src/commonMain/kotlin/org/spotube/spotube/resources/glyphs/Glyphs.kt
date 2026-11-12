@@ -364,6 +364,72 @@ object Glyphs {
         )
     }
 
+    // --- Shell (outline) --------------------------------------------------------------------
+
+    /** Lucide "library": books on a shelf. */
+    val Library: ImageVector by lazy {
+        glyph("Library", strokes = listOf("m16 6 4 14", "M12 6v14", "M8 8v12", "M4 4v16"))
+    }
+
+    /** Lucide "chart-column": listening stats. */
+    val Stats: ImageVector by lazy {
+        glyph(
+            "Stats",
+            strokes = listOf("M3 3v16a2 2 0 0 0 2 2h16", "M18 17V9", "M13 17V5", "M8 17v-3")
+        )
+    }
+
+    /** Lucide "plug": plugins. */
+    val Plugins: ImageVector by lazy {
+        glyph(
+            "Plugins",
+            strokes = listOf(
+                "M12 22v-5",
+                "M9 8V2",
+                "M15 8V2",
+                "M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8z"
+            )
+        )
+    }
+
+    /** Lucide "info". */
+    val Info: ImageVector by lazy {
+        glyph(
+            "Info",
+            strokes = listOf("M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z", "M12 16v-4", "M12 8h.01")
+        )
+    }
+
+    /** Lucide "sliders-horizontal": sound & EQ. */
+    val Equalizer: ImageVector by lazy {
+        glyph(
+            "Equalizer",
+            strokes = listOf(
+                "M21 4h-7", "M10 4H3", "M21 12h-9", "M8 12H3", "M21 20h-5", "M12 20H3",
+                "M14 2v4", "M8 10v4", "M16 18v4"
+            )
+        )
+    }
+
+    /** Lucide "picture-in-picture-2": mini player. */
+    val MiniPlayer: ImageVector by lazy {
+        glyph(
+            "MiniPlayer",
+            strokes = listOf(
+                "M21 9V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10c0 1.1.9 2 2 2h4",
+                "M14 13h6a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2z"
+            )
+        )
+    }
+
+    /** Lucide "user": signed-out avatar. */
+    val Person: ImageVector by lazy {
+        glyph(
+            "Person",
+            strokes = listOf("M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2", "M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z")
+        )
+    }
+
     // --- Volume (outline) -------------------------------------------------------------------
 
     private const val SPEAKER =

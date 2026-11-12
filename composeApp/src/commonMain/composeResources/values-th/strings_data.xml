@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Listening history -->
+    <string name="history_liked_songs">เพลงที่ชอบ</string>
+
+    <!-- Stats -->
+    <string name="stats_range_week">7 วัน</string>
+    <string name="stats_range_month">30 วัน</string>
+    <string name="stats_kpi_time">เวลาที่ฟัง</string>
+    <string name="stats_kpi_time_hours">%1$s ชม. %2$s นาที</string>
+    <string name="stats_kpi_time_minutes">%1$s นาที</string>
+    <string name="stats_kpi_vs_week">เทียบกับ 7 วันก่อนหน้า</string>
+    <string name="stats_kpi_vs_month">เทียบกับ 30 วันก่อนหน้า</string>
+    <string name="stats_kpi_no_previous">ยังไม่มีช่วงก่อนหน้าให้เทียบ</string>
+    <string name="stats_kpi_tracks">เพลงที่เล่น</string>
+    <string name="stats_kpi_new_tracks">เพลงใหม่ %1$s เพลง</string>
+    <string name="stats_kpi_top_artist">ศิลปินอันดับ 1</string>
+    <string name="stats_kpi_plays">%1$s ครั้ง</string>
+    <string name="stats_kpi_streak">ฟังต่อเนื่อง</string>
+    <string name="stats_kpi_days">%1$s วัน</string>
+    <string name="stats_kpi_best">สูงสุด %1$s วัน</string>
+    <string name="stats_panel_minutes">นาทีที่ฟังต่อวัน</string>
+    <string name="stats_panel_artists">ศิลปินที่ฟังบ่อย</string>
+    <string name="stats_panel_genres">แนวเพลง</string>
+    <string name="stats_bar_tooltip">%1$s: %2$s นาที</string>
+    <string name="stats_chart_description">กราฟแท่งแสดงจำนวนนาทีที่ฟังในแต่ละวัน</string>
+    <string name="stats_artists_empty">ฟังอีกสักหน่อย แล้วศิลปินที่ฟังบ่อยจะขึ้นตรงนี้</string>
+    <string name="stats_empty_title">ยังไม่มีสถิติ</string>
+    <string name="stats_empty_body">เปิดเพลงฟังสักเพลง แล้วสถิติของคุณจะขึ้นที่นี่</string>
+    <string name="stats_weekday_mon">จ.</string>
+    <string name="stats_weekday_tue">อ.</string>
+    <string name="stats_weekday_wed">พ.</string>
+    <string name="stats_weekday_thu">พฤ.</string>
+    <string name="stats_weekday_fri">ศ.</string>
+    <string name="stats_weekday_sat">ส.</string>
+    <string name="stats_weekday_sun">อา.</string>
+
+    <!-- Settings (glass layout) -->
+    <string name="settings_glass_subtitle">ทุกอย่างบันทึกให้อัตโนมัติ</string>
+    <string name="settings_glass_sections">หมวดการตั้งค่า</string>
+    <string name="settings_glass_nav_general">ทั่วไป</string>
+    <string name="settings_glass_nav_downloads_cache">ดาวน์โหลดและแคช</string>
+    <string name="settings_glass_nav_shortcuts">ทางลัดคีย์บอร์ด</string>
+    <string name="settings_glass_accent_title">สีเน้น</string>
+    <string name="settings_glass_accent_subtitle">“ตามเพลง” จะใช้สีจากปกเพลงที่กำลังเล่น</string>
+    <string name="settings_glass_accent_follow">ตามเพลง</string>
+    <string name="settings_glass_room_light_title">แสงจากปกเพลง</string>
+    <string name="settings_glass_room_light_subtitle">ระบายสีพื้นหลังทั้งหน้าต่างตามปกเพลงที่เล่นอยู่</string>
+    <string name="settings_glass_reduce_motion_title">ลดการเคลื่อนไหว</string>
+    <string name="settings_glass_reduce_motion_subtitle">หยุดแสงที่ลอยไปมาและปกที่หมุน</string>
+    <string name="settings_glass_shortcut_play">เล่น / หยุด</string>
+    <string name="settings_glass_shortcut_skip">เพลงถัดไป / ก่อนหน้า</string>
+    <string name="settings_glass_shortcut_search">ค้นหาและคำสั่ง</string>
+    <string name="settings_glass_shortcut_settings">ตั้งค่า</string>
+    <string name="settings_glass_shortcut_close">ปิดแผงที่เปิดอยู่</string>
+
+    <!-- Downloads / devices (glass layout) -->
+    <string name="downloads_ready_offline">พร้อมฟังออฟไลน์</string>
+    <string name="devices_glass_subtitle">เลือกว่าจะให้เพลงเล่นที่ไหน</string>
+    <string name="plugins_glass_subtitle">แหล่งข้อมูลเพลง แหล่งเสียง และเนื้อเพลง</string>
+</resources>

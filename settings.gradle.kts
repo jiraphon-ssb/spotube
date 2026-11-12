@@ -55,4 +55,5 @@ plugins {
 
 include(":composeApp")
 include(":plugin_interfaces")
+include(":millennium")
 include(":js_plugin_example")

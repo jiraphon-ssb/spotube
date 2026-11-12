@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Empty, unavailable and partial-failure states (lyrics, home). -->
+<resources>
+    <string name="lyrics_nothing_playing_title">Nothing playing</string>
+    <string name="lyrics_nothing_playing_body">Play a track and its lyrics show up here.</string>
+    <string name="lyrics_local_title">No lyrics for local files</string>
+    <string name="lyrics_local_body">Lyrics come from plugins, and plugins only cover streamed tracks.</string>
+    <string name="lyrics_no_plugin_title">No lyrics plugin</string>
+    <string name="lyrics_no_plugin_body">Install or pick a lyrics plugin to see lyrics for what’s playing.</string>
+    <string name="lyrics_action_browse_plugins">Open plugins</string>
+    <string name="lyrics_error_title">Couldn’t load lyrics</string>
+    <string name="lyrics_action_show_plain">Show plain lyrics</string>
+
+    <string name="home_empty_title">Nothing to browse yet</string>
+    <string name="home_empty_body">Your metadata plugin didn’t return any shelves. Try again, or switch plugins in Settings.</string>
+    <string name="home_load_more_failed">Couldn’t load more</string>
+</resources>

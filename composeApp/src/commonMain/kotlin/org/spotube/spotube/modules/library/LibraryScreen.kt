@@ -17,7 +17,6 @@
 
 package org.spotube.spotube.modules.library
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
@@ -26,8 +25,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,6 +43,8 @@ import com.composeunstyled.currentWindowWidthBreakpoint
 import org.spotube.spotube.getPlatform
 import org.spotube.spotube.isDesktop
 import org.spotube.spotube.core.ui.component.ApplicationMainBar
+import org.spotube.spotube.core.ui.component.PillChipRow
+import org.spotube.spotube.core.ui.component.cards.isWideShell
 import org.spotube.spotube.modules.downloads.DownloadsScreen
 import org.spotube.spotube.modules.library.album.LibraryAlbumsScreen
 import org.spotube.spotube.modules.library.artist.LibraryArtistsScreen
@@ -61,8 +60,6 @@ import org.spotube.spotube.modules.plugin.guard.MetadataPluginGuard
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.spotube.millennium.adaptive.WindowBreakpoints
-import org.spotube.millennium.composables.MillenniumButton
-import org.spotube.millennium.composables.MillenniumButtonStyle
 import org.spotube.millennium.composables.MillenniumIconButton
 import org.spotube.millennium.composables.MillenniumIconButtonStyle
 import org.spotube.millennium.composables.MillenniumTextField
@@ -73,6 +70,11 @@ import spotube.composeapp.generated.resources.*
 
 @Composable
 fun LibraryScreen(libraryState: LibraryState = koinInject()) {
+    // Wide glass shell: the rebuilt library (liked/pinned cards, filter segment, grid or table).
+    if (isWideShell()) {
+        LibraryOverview(libraryState)
+        return
+    }
     val state by libraryState.uiState.collectAsStateWithLifecycle()
     val expandedDesktop = getPlatform().isDesktop() &&
             (currentWindowWidthBreakpoint() isAtLeast WindowBreakpoints.Expanded)
@@ -120,7 +122,8 @@ fun LibraryScreen(libraryState: LibraryState = koinInject()) {
                 LibraryTab.Playlists -> MetadataPluginGuard(showTopBar = false, requireLogin = true) {
                     LibraryPlaylistsScreen(
                         showCreatePlaylist = state.showCreatePlaylist,
-                        viewMode = viewMode
+                        viewMode = viewMode,
+                        onCreatePlaylist = libraryState::showCreatePlaylist.takeIf { state.canCreatePlaylist }
                     )
                 }
 
@@ -139,17 +142,13 @@ fun LibraryScreen(libraryState: LibraryState = koinInject()) {
 
 @Composable
 private fun LibraryTabs(state: LibraryToolbarUiState, onTabSelected: (LibraryTab) -> Unit) {
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items(LibraryTab.entries) { tab ->
-            MillenniumButton(
-                onClick = { onTabSelected(tab) },
-                style = if (state.currentTab == tab) MillenniumButtonStyle.Primary else MillenniumButtonStyle.Secondary
-            ) { Text(stringResource(tab.titleResource)) }
-        }
-    }
+    val tabs = LibraryTab.entries
+    PillChipRow(
+        labels = tabs.map { stringResource(it.titleResource) },
+        selectedIndex = tabs.indexOf(state.currentTab),
+        onSelect = { onTabSelected(tabs[it]) },
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+    )
 }
 
 @Composable

@@ -22,12 +22,14 @@ import org.spotube.spotube.modules.settings.components.TextInputSettingCard
 import org.spotube.spotube.modules.settings.sections.JamNameSettingCard
 import org.spotube.spotube.modules.settings.sections.SettingsItemIcon
 import org.spotube.spotube.modules.settings.sections.settingsSectionCard
-import org.spotube.spotube.modules.settings.sections.settingsSectionHeader
 import org.spotube.spotube.resources.iconsax.CustomServer
 import org.spotube.spotube.resources.iconsax.Iconsax
 import org.spotube.spotube.resources.iconsax.IconsaxInformation
 import org.spotube.spotube.modules.settings.components.SettingCardItem
 import org.spotube.spotube.modules.shell.LocalAppShellBottomInset
+import org.spotube.spotube.modules.shell.LocalAppShellTopInset
+import org.spotube.spotube.modules.settings.components.GlassPageHeader
+import org.spotube.spotube.modules.settings.components.isWideShellLayout
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import spotube.composeapp.generated.resources.Res
@@ -48,9 +50,21 @@ import spotube.composeapp.generated.resources.settings_section_jam
 @Composable
 fun JamSettingsScreen(
     viewModel: JamSettingsViewModel = koinViewModel()) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        ApplicationMainBar(
-            title = { Text(stringResource(Res.string.settings_section_jam)) })
+    val wide = isWideShellLayout()
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = LocalAppShellTopInset.current)
+    ) {
+        if (wide) {
+            GlassPageHeader(
+                title = stringResource(Res.string.settings_section_jam),
+                modifier = Modifier.widthIn(max = 1280.dp).padding(horizontal = 32.dp)
+            )
+        } else {
+            ApplicationMainBar(
+                title = { Text(stringResource(Res.string.settings_section_jam)) })
+        }
         JamSettingsContent(
             viewModel = viewModel,
             modifier = Modifier.weight(1f))
@@ -79,8 +93,8 @@ internal fun JamSettingsContent(
                 .widthIn(max = 1280.dp)
                 .align(Alignment.TopCenter),
             contentPadding = contentPadding) {
-            settingsSectionHeader(Res.string.settings_jam_section_you)
             settingsSectionCard(
+                title = Res.string.settings_jam_section_you,
                 items = listOf(
                     {
                         JamNameSettingCard(
@@ -88,8 +102,8 @@ internal fun JamSettingsContent(
                             defaultName = uiState.defaultName,
                             onNameSaved = viewModel::setParticipantName)
                     }))
-            settingsSectionHeader(Res.string.settings_jam_section_connection)
             settingsSectionCard(
+                title = Res.string.settings_jam_section_connection,
                 items = listOf(
                     {
                         val invalidUrl = stringResource(Res.string.settings_jam_server_url_invalid)
@@ -107,8 +121,8 @@ internal fun JamSettingsContent(
                             },
                             onValueSaved = viewModel::setServerUrl)
                     }))
-            settingsSectionHeader(Res.string.settings_jam_section_diagnostics)
             settingsSectionCard(
+                title = Res.string.settings_jam_section_diagnostics,
                 items = listOf(
                     {
                         val resultMessage = uiState.testResult?.fold(

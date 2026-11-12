@@ -67,6 +67,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -85,6 +86,25 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.isCtrlPressed as isKeyCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed as isKeyMetaPressed
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.foundation.text.input.clearText
+import org.spotube.millennium.composables.MillenniumButton
+import org.spotube.millennium.composables.MillenniumButtonStyle
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isCtrlPressed
+import androidx.compose.ui.input.pointer.isMetaPressed
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
@@ -122,6 +142,12 @@ import org.spotube.spotube.resources.iconsax.IconsaxPlay
 import org.spotube.spotube.resources.iconsax.IconsaxSort
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.DpSize
+import org.spotube.spotube.resources.iconsax.IconsaxHeart2
+import org.spotube.spotube.modules.shell.LocalShellActions
+import org.spotube.spotube.core.ui.component.cards.isWideShell
+import org.spotube.spotube.core.ui.component.cards.pageGlassFill
 import spotube.composeapp.generated.resources.*
 
 private val CompactTrackListBreakpoint = 600.dp
@@ -146,6 +172,10 @@ private val ColumnGap = 16.dp
 private val DurationWidth = 56.dp
 private val OptionsWidth = 36.dp
 private val DefaultAlbumWidth = 220.dp
+/** Hover actions before the duration: add to queue + like (two 32dp keys, 4dp apart). */
+private val RowActionsWidth = 68.dp
+private val SheetRadius = 18.dp
+private val SheetInset = 8.dp
 
 /** The album column takes a share of the row, like a real table, within readable bounds. */
 private fun albumColumnWidth(tableWidth: Dp): Dp =
@@ -229,6 +259,14 @@ fun TrackList(
     }
 
     val listState = state ?: rememberLazyListState()
+    // Index of the sticky column header in the lazy path: [header] [filter row] top spacer, header.
+    val stickyHeaderIndex = (if (headerContent != null) 1 else 0) + (if (!simplified) 1 else 0) + 1
+    val headerStuck by remember(listState, stickyHeaderIndex) {
+        derivedStateOf {
+            listState.firstVisibleItemIndex > stickyHeaderIndex ||
+                (listState.firstVisibleItemIndex == stickyHeaderIndex && listState.firstVisibleItemScrollOffset > 0)
+        }
+    }
     val density = LocalDensity.current
     val shouldLoadMore = remember(density) {
         derivedStateOf {
@@ -254,6 +292,10 @@ fun TrackList(
     val showAlbum = !isCompact
     val useDropdownForOptions = isDesktop && !isCompact
     val showColumnHeader = !simplified && showIndex && !isSelectionMode
+    // Wide glass shell: the rows sit on one glass sheet (each lazy item paints its slice of it).
+    val glassSheet = scrollable && !simplified && isWideShell()
+    val sheetFill = pageGlassFill()
+    val showHoverActions = useDropdownForOptions && !isJamGuest
 
     val trackRow: @Composable (Int, MetadataTrack) -> Unit = { displayedIndex, track ->
         TrackListRow(
@@ -309,7 +351,8 @@ fun TrackList(
             onShowOptionsClick = { selectedTrackForOptions = track },
             onArtistClick = onArtistClick,
             onAlbumClick = onAlbumClick,
-            onArtistsOverflowClick = { onArtistsOverflowClick(track) })
+            onArtistsOverflowClick = { onArtistsOverflowClick(track) },
+            showHoverActions = showHoverActions)
     }
 
     // Shimmer, error, empty and next-page rows at the end of the card.
@@ -330,7 +373,22 @@ fun TrackList(
                 isError = true)
         }
 
-        if (showEmptyMessage && !isLoading && visibleTracks.isEmpty() && error == null) {
+        val filterHidesAll = normalizedQuery.isNotBlank() && tracks.isNotEmpty()
+        if (filterHidesAll && !isLoading && visibleTracks.isEmpty() && error == null) {
+            // The list isn't empty, the filter is: say so and offer the way back.
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(end = 8.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f)) {
+                    TrackListFeedbackRow(stringResource(Res.string.a11y_no_match, filterQuery.trim()))
+                }
+                MillenniumButton(
+                    onClick = { filterState.clearText() },
+                    style = MillenniumButtonStyle.Quiet) {
+                    Text(stringResource(Res.string.a11y_clear_filter), maxLines = 1)
+                }
+            }
+        } else if (showEmptyMessage && !isLoading && visibleTracks.isEmpty() && error == null) {
             TrackListFeedbackRow(stringResource(Res.string.track_list_no_tracks))
         }
 
@@ -344,15 +402,19 @@ fun TrackList(
     }
 
     val columnHeader: @Composable () -> Unit = {
-        TrackTableHeader(showAlbum = showAlbum)
+        TrackTableHeader(showAlbum = showAlbum, showRowActions = showHoverActions)
     }
 
     // Flat table: rows sit on the canvas, separated by spacing and the hover plate.
     val trackCardContent: @Composable () -> Unit = {
         Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
             if (showColumnHeader) columnHeader()
+            // Plugin ids can repeat, so key rows by the same de-duplicated keys as the lazy path.
+            val rowKeys = uniqueLazyKeys(visibleTracks) { it.id }
             visibleTracks.forEachIndexed { displayedIndex, track ->
-                trackRow(displayedIndex, track)
+                key(rowKeys[displayedIndex]) {
+                    trackRow(displayedIndex, track)
+                }
             }
             trackCardFooter()
         }
@@ -508,26 +570,69 @@ fun TrackList(
                     item { Box(Modifier.padding(bottom = 2.dp)) { filterSortRow() } }
                 }
                 item(key = TrackCardTopKey) {
-                    Spacer(Modifier.fillMaxWidth().height(4.dp))
+                    if (glassSheet) {
+                        Spacer(
+                            Modifier.fillMaxWidth().height(SheetInset)
+                                .clip(RoundedCornerShape(topStart = SheetRadius, topEnd = SheetRadius))
+                                .background(sheetFill)
+                        )
+                    } else {
+                        Spacer(Modifier.fillMaxWidth().height(4.dp))
+                    }
                 }
                 if (showColumnHeader) {
                     stickyHeader(key = "track-table-header") {
-                        // Opaque so rows scrolling under it don't show through.
-                        Box(Modifier.background(AppTheme.colors.background)) { columnHeader() }
+                        // Glass: a slice of the sheet at rest; nearly opaque once rows scroll
+                        // under it, so their text doesn't show through.
+                        val headerFill = if (glassSheet) {
+                            if (headerStuck) AppTheme.colors.surface.copy(alpha = 0.94f) else sheetFill
+                        } else {
+                            AppTheme.colors.background
+                        }
+                        Box(
+                            Modifier
+                                .background(headerFill)
+                                .then(if (glassSheet) Modifier.padding(horizontal = SheetInset) else Modifier)
+                        ) { columnHeader() }
                     }
                 }
                 // Plugin ids can repeat (the same track twice in a playlist).
                 val rowKeys = uniqueLazyKeys(visibleTracks) { it.id }
                 items(visibleTracks.size, key = { TrackCardRowKeyPrefix + rowKeys[it] }) { displayedIndex ->
-                    Column(Modifier.fillMaxWidth()) {
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .then(
+                                if (glassSheet) Modifier.background(sheetFill).padding(horizontal = SheetInset)
+                                else Modifier
+                            )
+                    ) {
                         trackRow(displayedIndex, visibleTracks[displayedIndex])
                     }
                 }
                 item(key = TrackCardFooterKey) {
-                    Column(Modifier.fillMaxWidth()) { trackCardFooter() }
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .then(
+                                if (glassSheet) Modifier.background(sheetFill).padding(horizontal = SheetInset)
+                                else Modifier
+                            )
+                    ) { trackCardFooter() }
                 }
                 item(key = TrackCardBottomKey) {
-                    Spacer(Modifier.fillMaxWidth().height(16.dp))
+                    if (glassSheet) {
+                        Column(Modifier.fillMaxWidth()) {
+                            Spacer(
+                                Modifier.fillMaxWidth().height(SheetInset)
+                                    .clip(RoundedCornerShape(bottomStart = SheetRadius, bottomEnd = SheetRadius))
+                                    .background(sheetFill)
+                            )
+                            Spacer(Modifier.fillMaxWidth().height(16.dp))
+                        }
+                    } else {
+                        Spacer(Modifier.fillMaxWidth().height(16.dp))
+                    }
                 }
                 if (footerContent != null) {
                     item {
@@ -621,13 +726,21 @@ private fun TrackListRow(
     onArtistClick: (MetadataArtist.Basic) -> Unit,
     onAlbumClick: (MetadataAlbum.Detailed) -> Unit,
     onArtistsOverflowClick: () -> Unit,
+    showHoverActions: Boolean = false,
     modifier: Modifier = Modifier) {
     val artworkInteractionSource = remember { MutableInteractionSource() }
     val isArtworkHovered by artworkInteractionSource.collectIsHoveredAsState()
     val rowInteractionSource = remember { MutableInteractionSource() }
     val isRowHovered by rowInteractionSource.collectIsHoveredAsState()
     var rowHasFocus by remember { mutableStateOf(false) }
+    var rowSelfFocused by remember { mutableStateOf(false) }
+    // Swallow the key-up of a Space we used for selection so the row doesn't also "click".
+    var spaceHandled by remember { mutableStateOf(false) }
+    val nowPlayingLabel = stringResource(Res.string.a11y_now_playing)
     var optionsMenuOpen by remember { mutableStateOf(false) }
+    val isSelectedState = rememberUpdatedState(isSelected)
+    // pointerInput(Unit) below outlives recompositions; read the latest toggle through this.
+    val currentOnSelectionToggle by rememberUpdatedState(onSelectionToggle)
     // Row actions stay out of the way until the row is pointed at, tabbed into, or its menu is open.
     val showRowActions = isRowHovered || rowHasFocus || optionsMenuOpen || !useDropdownForOptions
     val albumWidth = LocalAlbumColumnWidth.current
@@ -635,7 +748,52 @@ private fun TrackListRow(
     MillenniumListTile(
         modifier = modifier
             .hoverable(rowInteractionSource)
-            .onFocusChanged { rowHasFocus = it.hasFocus },
+            .onFocusChanged {
+                rowHasFocus = it.hasFocus
+                rowSelfFocused = it.isFocused
+            }
+            // Keyboard selection: Space toggles the focused row in selection mode, Cmd/Ctrl+Space
+            // anywhere (the keyboard twin of Cmd/Ctrl-click). Only when the row itself is focused,
+            // so Space on its options button still opens the menu.
+            .onPreviewKeyEvent { event ->
+                if (event.key != Key.Spacebar) return@onPreviewKeyEvent false
+                when (event.type) {
+                    KeyEventType.KeyDown -> {
+                        val modifierHeld = event.isKeyCtrlPressed || event.isKeyMetaPressed
+                        if (rowSelfFocused && (isSelectionMode || modifierHeld)) {
+                            if (!spaceHandled) onSelectionToggle(!isSelectedState.value)
+                            spaceHandled = true
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    KeyEventType.KeyUp -> if (spaceHandled) {
+                        spaceHandled = false
+                        true
+                    } else {
+                        false
+                    }
+                    else -> false
+                }
+            }
+            .then(
+                if (isCurrentTrack) Modifier.semantics { stateDescription = nowPlayingLabel }
+                else Modifier
+            )
+            // Cmd/Ctrl-click selects a row (and starts selection) instead of playing it.
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        if (event.type != PointerEventType.Press) continue
+                        val mods = event.keyboardModifiers
+                        if (!(mods.isCtrlPressed || mods.isMetaPressed)) continue
+                        event.changes.forEach { it.consume() }
+                        currentOnSelectionToggle(!isSelectedState.value)
+                    }
+                }
+            },
         // The playing row is marked by its yellow title and equaliser, not a plate.
         selected = isSelected,
         onClick = onTrackClick,
@@ -668,11 +826,14 @@ private fun TrackListRow(
                     Box(
                         modifier = if (showIndex) Modifier.width(IndexWidth) else Modifier,
                         contentAlignment = Alignment.Center) {
+                        val selectLabel = stringResource(Res.string.a11y_select_track, track.title)
                         MillenniumCheckbox(
                             checked = isSelected,
                             onCheckedChange = { onSelectionToggle(it) },
-                            label = "",
-                            modifier = Modifier.shimmerApply())
+                            label = null,
+                            modifier = Modifier
+                                .semantics { contentDescription = selectLabel }
+                                .shimmerApply())
                     }
                 } else if (showIndex) {
                     Box(
@@ -683,10 +844,12 @@ private fun TrackListRow(
                             transitionSpec = { fadeIn() togetherWith fadeOut() },
                             label = "index-checkbox") { hovered ->
                             if (hovered) {
-                                MillenniumCheckbox(
-                                    checked = isSelected,
-                                    onCheckedChange = { onSelectionToggle(it) },
-                                    label = "",
+                                // Hover shows what a click does: play from this row.
+                                MillenniumIcon(
+                                    imageVector = Glyphs.Play,
+                                    contentDescription = null,
+                                    tint = AppTheme.colors.onSurface,
+                                    size = 16.dp,
                                     modifier = Modifier.shimmerApply())
                             } else if (isCurrentTrack) {
                                 // The playing row shows a live equaliser instead of its number.
@@ -722,11 +885,14 @@ private fun TrackListRow(
 
                     AsyncImage(
                         model = imageRequest,
-                        contentDescription = track.title,
+                        // The title is read from the row already.
+                        contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize().shimmerApply())
 
-                    if (isArtworkHovered || isCurrentTrack) {
+                    // With the # column visible it already shows play/state; only narrow layouts
+                    // need the overlay on the artwork.
+                    if (!showIndex && (isArtworkHovered || isCurrentTrack)) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -761,6 +927,7 @@ private fun TrackListRow(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier
+                            .keyboardFocusRing(AppTheme.shapes.small)
                             .hoverable(interactionSource)
                             .clickable(
                                 indication = null,
@@ -782,6 +949,16 @@ private fun TrackListRow(
                                     Modifier
                                 }))
                 }
+                }
+
+                if (showHoverActions) {
+                    RowHoverActions(
+                        title = track.title,
+                        coverUrl = (track.album?.thumbnails ?: track.thumbnails)?.firstOrNull()?.url,
+                        isFavorite = trackOptionsState.isFavorite,
+                        visible = showRowActions,
+                        onAction = onTrackOptionsAction
+                    )
                 }
 
                 TextWithShimmer(
@@ -819,11 +996,62 @@ private fun TrackListRow(
 }
 
 /**
+ * Add to queue + like, shown on row hover / focus (always laid out, so the columns never shift
+ * and Tab still reaches them).
+ */
+@Composable
+private fun RowHoverActions(
+    title: String,
+    coverUrl: String?,
+    isFavorite: Boolean,
+    visible: Boolean,
+    onAction: (TrackOptionsAction) -> Unit) {
+    val colors = AppTheme.colors
+    val shellActions = LocalShellActions.current
+    val addedMessage = stringResource(Res.string.pages_added_to_queue, title)
+    Row(
+        modifier = Modifier.width(RowActionsWidth).alpha(if (visible || isFavorite) 1f else 0f),
+        horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
+        verticalAlignment = Alignment.CenterVertically) {
+        // While hidden, only a liked heart stays (so a liked track still reads as liked).
+        Box(Modifier.alpha(if (visible) 1f else 0f)) {
+            MillenniumIconButton(
+                onClick = {
+                    onAction(TrackOptionsAction.AddToQueue)
+                    shellActions.showToast(addedMessage, coverUrl)
+                },
+                style = MillenniumIconButtonStyle.Quiet,
+                contentDescription = stringResource(Res.string.player_add_to_queue_content_description),
+                size = DpSize(32.dp, 32.dp)) {
+                MillenniumIcon(
+                    imageVector = Glyphs.AddTo,
+                    contentDescription = null,
+                    tint = colors.onSurfaceVariant,
+                    size = 17.dp)
+            }
+        }
+        MillenniumIconButton(
+            onClick = { onAction(TrackOptionsAction.ToggleFavorite) },
+            style = MillenniumIconButtonStyle.Quiet,
+            contentDescription = stringResource(
+                if (isFavorite) Res.string.track_options_remove_from_favorites
+                else Res.string.track_options_save_as_favorite),
+            size = DpSize(32.dp, 32.dp)) {
+            MillenniumIcon(
+                imageVector = if (isFavorite) Iconsax.IconsaxHeart2 else Glyphs.Heart,
+                contentDescription = null,
+                tint = if (isFavorite) colors.primary else colors.onSurfaceVariant,
+                size = 17.dp)
+        }
+    }
+}
+
+/**
  * Column labels over the track rows (desktop width). Mirrors [TrackListRow]'s geometry: index,
  * artwork + title, album, duration, then the options slot.
  */
 @Composable
-private fun TrackTableHeader(showAlbum: Boolean) {
+private fun TrackTableHeader(showAlbum: Boolean, showRowActions: Boolean = false) {
     val colors = AppTheme.colors
     val albumWidth = LocalAlbumColumnWidth.current
     val style = AppTheme.typography.labelMedium
@@ -845,6 +1073,7 @@ private fun TrackTableHeader(showAlbum: Boolean) {
                     color = colors.onSurfaceVariant, maxLines = 1, modifier = Modifier.width(albumWidth))
                 Spacer(Modifier.width(ColumnGap))
             }
+            if (showRowActions) Spacer(Modifier.width(RowActionsWidth + ColumnGap))
             Box(Modifier.width(DurationWidth), contentAlignment = Alignment.CenterEnd) {
                 MillenniumIcon(
                     imageVector = Glyphs.Clock,
@@ -884,6 +1113,7 @@ private fun ArtistChips(
                     overflow = TextOverflow.Ellipsis,
                     textDecoration = if (isHovered || isPressed) TextDecoration.Underline else null,
                     modifier = Modifier
+                        .keyboardFocusRing(AppTheme.shapes.small)
                         .hoverable(interactionSource)
                         .clickable(
                         indication = null,
@@ -907,7 +1137,9 @@ private fun ArtistChips(
                 color = AppTheme.colors.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.clickable(onClick = onArtistsOverflowClick))
+                modifier = Modifier
+                    .keyboardFocusRing(AppTheme.shapes.small)
+                    .clickable(onClick = onArtistsOverflowClick))
         }
     }
 }
@@ -1078,7 +1310,7 @@ fun previewTracks(): List<MetadataTrack> {
 @Composable
 @Preview
 private fun TrackListPreview() {
-    Box(modifier = Modifier.fillMaxSize().background(AppTheme.colors.background)) {
+    Box(modifier = Modifier.fillMaxSize()) {
         TrackList(
             tracks = previewTracks(),
             hasMore = true,

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Wide-layout pages: Home bento, Library, playlist poster header, Now Playing. -->
+<resources>
+    <string name="pages_playing">Playing</string>
+    <string name="pages_added_to_queue">Added “%1$s” to the queue</string>
+
+    <string name="pages_home_greeting_morning">Good morning</string>
+    <string name="pages_home_greeting_afternoon">Good afternoon</string>
+    <string name="pages_home_greeting_evening">Good evening</string>
+    <string name="pages_home_greeting_night">Late-night listening</string>
+    <string name="pages_home_week_hours">This week: %1$d h %2$d min</string>
+    <string name="pages_home_week_minutes">This week: %1$d min</string>
+    <string name="pages_home_week_stats">See stats</string>
+    <string name="pages_home_add_to_queue">Add to queue</string>
+    <string name="pages_home_continue_title">Continue</string>
+    <string name="pages_home_continue_subtitle">Pick up where you left off</string>
+    <string name="pages_home_minutes_left">%1$d min left</string>
+    <string name="pages_home_hours_left">%1$d h %2$d min left</string>
+    <string name="pages_home_new">New</string>
+
+    <string name="pages_library_title">Library</string>
+    <string name="pages_library_summary">%1$s playlists · %2$s albums · %3$s artists</string>
+    <string name="pages_library_filter_all">All</string>
+    <string name="pages_library_liked_count">%1$d songs</string>
+    <string name="pages_library_downloads_summary">%1$d items · play offline</string>
+    <string name="pages_library_downloads_empty">Nothing downloaded yet</string>
+    <string name="pages_library_recent">Recently played</string>
+    <string name="pages_library_recent_summary">Your last %1$d</string>
+    <string name="pages_library_recent_empty">Nothing played yet</string>
+    <string name="pages_library_search_placeholder">Search your library</string>
+    <string name="pages_library_sort_label">Sort by</string>
+    <string name="pages_library_sort_recent_added">Recently added</string>
+    <string name="pages_library_sort_name">Name</string>
+    <string name="pages_library_sort_creator">Creator</string>
+    <string name="pages_library_sort_recent_played">Recently played</string>
+    <string name="pages_library_col_title">Title</string>
+    <string name="pages_library_col_type">Type</string>
+    <string name="pages_library_col_owner">By</string>
+    <string name="pages_library_col_tracks">Songs</string>
+    <string name="pages_library_no_match">Nothing in your library matches “%1$s”</string>
+    <string name="pages_library_no_match_hint">Try Search to look through the whole catalogue.</string>
+    <string name="pages_library_empty">Nothing here yet</string>
+    <string name="pages_library_default_playlist_name">My playlist</string>
+    <string name="pages_library_cover_colour">Cover colour</string>
+    <string name="pages_library_cover_colour_option">Colour %1$d</string>
+    <string name="pages_library_created">Created “%1$s”</string>
+    <string name="pages_library_create_failed">Couldn\'t create the playlist. Check your connection and try again.</string>
+
+    <string name="pages_collection_tracks">%1$d songs</string>
+    <string name="pages_collection_duration_hours">about %1$d h %2$d min</string>
+    <string name="pages_collection_duration_minutes">%1$d min</string>
+    <string name="pages_collection_add_all_to_queue">Add all to queue</string>
+
+    <string name="pages_now_translation">Show translation</string>
+    <string name="pages_now_soon">soon</string>
+    <string name="pages_now_sound">Sound &amp; EQ</string>
+    <string name="pages_now_skip_hint">Click to skip to the next song</string>
+</resources>

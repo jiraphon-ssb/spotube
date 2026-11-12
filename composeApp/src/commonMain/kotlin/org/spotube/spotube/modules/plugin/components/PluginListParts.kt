@@ -48,8 +48,9 @@ import org.spotube.millennium.composables.MillenniumTooltip
 import org.spotube.millennium.theme.MillenniumTheme
 import org.spotube.millennium.theme.gelBrush
 import org.spotube.millennium.theme.millenniumBevelBrush
-import org.spotube.millennium.theme.millenniumPanelBrush
 import org.spotube.millennium.theme.millenniumSurface
+import org.spotube.spotube.modules.settings.components.GlassCardShape
+import org.spotube.spotube.modules.settings.components.glassSurface
 import org.spotube.spotube.core.ui.theming.AppTheme
 import org.spotube.spotube.modules.plugin.PluginAbility
 
@@ -96,7 +97,7 @@ internal fun GelIconTile(icon: ImageVector, size: Dp = 34.dp) {
                 shape = RoundedCornerShape(size / 3.4f),
                 borderColor = colors.accentBottom.copy(alpha = 0.7f),
                 borderWidth = 1.dp,
-                shadowElevation = 2.dp,
+                shadowElevation = 0.dp,
                 innerGlowColor = Color.White.copy(alpha = 0.55f)),
         contentAlignment = Alignment.Center) {
         MillenniumIcon(
@@ -107,7 +108,7 @@ internal fun GelIconTile(icon: ImageVector, size: Dp = 34.dp) {
     }
 }
 
-/** The pearl panel that groups rows, matching the settings section cards. */
+/** The glass panel that groups rows, matching the settings groups (room light shows through). */
 @Composable
 internal fun PluginListPanel(
     modifier: Modifier = Modifier,
@@ -115,13 +116,7 @@ internal fun PluginListPanel(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .millenniumSurface(
-                background = millenniumPanelBrush(MillenniumTheme.colors),
-                shape = AppTheme.shapes.medium,
-                borderColor = MillenniumTheme.colors.border,
-                borderWidth = 1.dp,
-                shadowElevation = 6.dp,
-                innerGlowColor = MillenniumTheme.colors.highlight.copy(alpha = 0.55f)),
+            .glassSurface(AppTheme.colors, GlassCardShape),
         content = content)
 }
 
@@ -145,7 +140,7 @@ internal fun PluginIconWell(
                 shape = shape,
                 borderColor = colors.border,
                 borderWidth = 1.dp,
-                shadowElevation = 2.dp)
+                shadowElevation = 0.dp)
             .padding(1.dp)
             .clip(shape),
         contentAlignment = Alignment.Center) {
@@ -203,15 +198,15 @@ internal fun OutlineTag(text: String, icon: ImageVector? = null) {
     }
 }
 
-/** Ability tag tinted with the ability's accent (the same hue as its default-plugin tile). */
+/** Neutral ability tag: glass fill, hairline border, muted glyph (no per-ability hue). */
 @Composable
 internal fun AbilityTag(ability: PluginAbility) {
-    val accent = ability.accentColor()
+    val accent = AppTheme.colors.onSurfaceVariant
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(50))
-            .background(accent.copy(alpha = 0.12f))
-            .border(1.dp, accent.copy(alpha = 0.35f), RoundedCornerShape(50))
+            .background(AppTheme.colors.surfaceContainerHigh)
+            .border(1.dp, AppTheme.colors.outline, RoundedCornerShape(50))
             .padding(horizontal = 8.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)) {

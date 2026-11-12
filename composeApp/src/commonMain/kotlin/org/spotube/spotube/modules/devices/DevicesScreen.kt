@@ -20,7 +20,6 @@ package org.spotube.spotube.modules.devices
 
 import org.spotube.millennium.composables.MillenniumButton
 import org.spotube.millennium.composables.MillenniumButtonStyle
-import org.spotube.millennium.composables.MillenniumCard
 import org.spotube.millennium.composables.MillenniumIcon
 import org.spotube.millennium.composables.MillenniumIconButton
 import org.spotube.millennium.composables.MillenniumIconButtonStyle
@@ -44,8 +43,6 @@ import androidx.compose.foundation.shape.CircleShape
 import org.spotube.spotube.core.ui.theming.AppTheme
 
 import com.composeunstyled.Text
-import compose.icons.FeatherIcons
-import compose.icons.feathericons.ChevronRight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -53,22 +50,30 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.spotube.spotube.core.discovery.rememberLocalNetworkPermissionRequester
 import org.spotube.spotube.core.ui.component.ApplicationMainBar
 import org.spotube.spotube.modules.settings.SettingsViewModel
-import org.spotube.spotube.modules.settings.components.SettingCardItem
-import org.spotube.spotube.modules.settings.sections.SettingsItemIcon
 import org.spotube.spotube.modules.settings.sections.remoteControlSettingCards
 import org.spotube.spotube.modules.settings.sections.settingsSectionCard
 import org.spotube.spotube.modules.settings.sections.settingsSectionHeader
 import org.spotube.spotube.modules.shell.LocalAppShellBottomInset
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.DpSize
+import org.spotube.spotube.modules.settings.components.GlassButton
+import org.spotube.spotube.modules.settings.components.GlassIconTile
+import org.spotube.spotube.modules.settings.components.GlassListCard
+import org.spotube.spotube.modules.settings.components.GlassPageHeader
+import org.spotube.spotube.modules.settings.components.GlassStatusPill
+import org.spotube.spotube.modules.settings.components.isWideShellLayout
+import org.spotube.spotube.modules.shell.LocalAppShellTopInset
+import org.spotube.spotube.resources.glyphs.Glyphs
+import spotube.composeapp.generated.resources.devices_glass_subtitle
 import org.spotube.spotube.resources.iconsax.Iconsax
 import org.spotube.spotube.resources.iconsax.IconsaxCloseSquare
 import org.spotube.spotube.resources.iconsax.IconsaxInformation
-import org.spotube.spotube.resources.iconsax.IconsaxMirroringScreen
 import org.spotube.spotube.resources.iconsax.IconsaxRefreshRight
 import org.spotube.spotube.resources.iconsax.IconsaxWifiSquare
 import org.jetbrains.compose.resources.stringResource
@@ -113,28 +118,50 @@ fun DevicesScreen(
         }
     }
 
+    val wide = isWideShellLayout()
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MillenniumTheme.colors.background)
+            // The wide shell draws the room light behind pages; only the compact one needs a canvas.
+            .then(if (wide) Modifier else Modifier.background(MillenniumTheme.colors.background))
+            .padding(top = LocalAppShellTopInset.current)
     ) {
-        ApplicationMainBar(
-            backButton = true,
-            title = { Text(stringResource(Res.string.devices_title)) },
-            actions = {
-                MillenniumIconButton(
-                    onClick = viewModel::startDiscovery,
-                    enabled = !state.isConnecting,
-                    loading = state.isDiscovering,
-                    style = MillenniumIconButtonStyle.Quiet
+        if (wide) {
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+                GlassPageHeader(
+                    title = stringResource(Res.string.devices_title),
+                    subtitle = stringResource(Res.string.devices_glass_subtitle),
+                    modifier = Modifier
+                        .widthIn(max = ContentMaxWidth)
+                        .padding(horizontal = 8.dp)
                 ) {
-                    MillenniumIcon(
-                        imageVector = Iconsax.IconsaxRefreshRight,
-                        contentDescription = stringResource(Res.string.devices_refresh)
+                    GlassButton(
+                        text = stringResource(Res.string.devices_search_again),
+                        onClick = viewModel::startDiscovery,
+                        enabled = !state.isConnecting,
+                        loading = state.isDiscovering
                     )
                 }
             }
-        )
+        } else {
+            ApplicationMainBar(
+                backButton = true,
+                title = { Text(stringResource(Res.string.devices_title)) },
+                actions = {
+                    MillenniumIconButton(
+                        onClick = viewModel::startDiscovery,
+                        enabled = !state.isConnecting,
+                        loading = state.isDiscovering,
+                        style = MillenniumIconButtonStyle.Quiet
+                    ) {
+                        MillenniumIcon(
+                            imageVector = Iconsax.IconsaxRefreshRight,
+                            contentDescription = stringResource(Res.string.devices_refresh)
+                        )
+                    }
+                }
+            )
+        }
 
         Box(
             modifier = Modifier
@@ -176,17 +203,13 @@ fun DevicesScreen(
 
                 if (state.devices.isNotEmpty()) {
                     settingsSectionHeader(Res.string.devices_section_available)
-                    settingsSectionCard(
-                        items = state.devices.map { device ->
-                            {
-                                DeviceTile(
-                                    device = device,
-                                    enabled = !state.isConnecting || device.isConnecting,
-                                    onClick = { viewModel.onDeviceClick(device.key) }
-                                )
-                            }
-                        }
-                    )
+                    items(state.devices) { device ->
+                        DeviceTile(
+                            device = device,
+                            enabled = !state.isConnecting || device.isConnecting,
+                            onClick = { viewModel.onDeviceClick(device.key) }
+                        )
+                    }
                     if (state.isDiscovering) {
                         item {
                             Text(
@@ -229,21 +252,18 @@ private fun DeviceTile(
     onClick: () -> Unit
 ) {
     val name = device.name ?: stringResource(Res.string.devices_unknown_device)
-    SettingCardItem(
-        enabled = enabled,
+    GlassListCard(
         title = name,
         subtitle = device.address ?: stringResource(Res.string.devices_resolving),
-        icon = { SettingsItemIcon(Iconsax.IconsaxMirroringScreen, name) },
-        trailingContent = {
+        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+        enabled = enabled,
+        leading = { GlassIconTile(Glyphs.Devices) },
+        trailing = {
             when {
                 device.isConnecting -> MillenniumSpokeSpinner(size = 20.dp)
-                device.isConnected -> Text(
-                    text = stringResource(Res.string.devices_status_connected),
-                    style = AppTheme.typography.labelMedium,
-                    color = AppTheme.colors.primary
-                )
+                device.isConnected -> GlassStatusPill(stringResource(Res.string.devices_status_connected))
                 else -> MillenniumIcon(
-                    imageVector = FeatherIcons.ChevronRight,
+                    imageVector = Glyphs.ChevronRight,
                     contentDescription = null,
                     tint = AppTheme.colors.onSurfaceVariant
                 )
@@ -260,55 +280,34 @@ private fun LazyItemScope.ConnectedDeviceCard(
     onDisconnect: () -> Unit
 ) {
     val name = device.name ?: stringResource(Res.string.devices_unknown_device)
-    MillenniumCard(
+    GlassListCard(
+        title = name,
+        subtitle = device.address,
         modifier = Modifier
             .fillParentMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        maxWidth = ContentMaxWidth,
-        contentPadding = PaddingValues(16.dp),
-        contentSpacing = 16.dp,
-        shadowElevation = 6.dp
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            SettingsItemIcon(Iconsax.IconsaxMirroringScreen, name)
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = name,
-                    style = AppTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+            .padding(horizontal = 8.dp, vertical = 5.dp),
+        leading = { GlassIconTile(Glyphs.Devices) },
+        trailing = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                GlassButton(
+                    text = stringResource(Res.string.devices_disconnect),
+                    onClick = onDisconnect,
+                    loading = device.isDisconnecting
                 )
-                Text(
-                    text = device.address,
-                    style = AppTheme.typography.bodySmall,
-                    color = AppTheme.colors.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                MillenniumButton(
+                    onClick = onOpenRemote,
+                    style = MillenniumButtonStyle.Primary,
+                    shape = RoundedCornerShape(10.dp),
+                    minSize = DpSize(0.dp, 34.dp)
+                ) {
+                    Text(stringResource(Res.string.devices_open_remote))
+                }
             }
         }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
-        ) {
-            MillenniumButton(
-                onClick = onDisconnect,
-                loading = device.isDisconnecting,
-                style = MillenniumButtonStyle.Secondary
-            ) {
-                Text(stringResource(Res.string.devices_disconnect))
-            }
-            MillenniumButton(
-                onClick = onOpenRemote,
-                style = MillenniumButtonStyle.Primary
-            ) {
-                Text(stringResource(Res.string.devices_open_remote))
-            }
-        }
-    }
+    )
 }
 
 @Composable

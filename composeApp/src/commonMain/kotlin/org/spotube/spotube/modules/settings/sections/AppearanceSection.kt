@@ -17,82 +17,108 @@
 
 package org.spotube.spotube.modules.settings.sections
 
-import org.spotube.millennium.composables.MillenniumDialogHeader
-import org.spotube.millennium.composables.MillenniumDialogTitle
-import org.spotube.millennium.composables.MillenniumDialogClose
-import org.spotube.millennium.composables.MillenniumDialogBody
-import org.spotube.millennium.composables.MillenniumDialogFooter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.stringResource
+import org.spotube.millennium.theme.MillenniumPalette
+import org.spotube.spotube.core.ui.component.keyboardFocusRing
 import org.spotube.spotube.core.ui.theming.AppTheme
-import org.spotube.spotube.core.ui.theming.rememberAppFontFamily
-import org.spotube.spotube.core.ui.theming.spotubeMillenniumConfig
 import org.spotube.spotube.core.ui.theming.spotubeTokens
 import org.spotube.spotube.modules.settings.SettingsViewModel
 import org.spotube.spotube.modules.settings.UserSettings
-import org.spotube.spotube.modules.settings.components.SelectionSettingCard
 import org.spotube.spotube.modules.settings.components.SettingCardItem
-import org.spotube.spotube.resources.iconsax.Iconsax
-import org.spotube.spotube.resources.iconsax.IconsaxColorSwatch
-import org.spotube.spotube.resources.iconsax.IconsaxMagic
-import org.jetbrains.compose.resources.stringResource
-import org.spotube.millennium.composables.MillenniumButton
-import org.spotube.millennium.composables.MillenniumButtonStyle
-import org.spotube.millennium.composables.MillenniumDialog
-import org.spotube.millennium.composables.MillenniumSeparator
-import org.spotube.millennium.composables.MillenniumText
-import org.spotube.millennium.theme.MillenniumColorSchemes
-import org.spotube.millennium.theme.MillenniumPalette
-import org.spotube.millennium.theme.MillenniumTheme
-import org.spotube.millennium.theme.MillenniumThemeConfig
-import org.spotube.millennium.theme.resolve
-import spotube.composeapp.generated.resources.*
+import org.spotube.spotube.modules.settings.components.SwitchSettingCard
+import org.spotube.spotube.modules.shell.LocalRoomLight
+import spotube.composeapp.generated.resources.Res
+import spotube.composeapp.generated.resources.settings_glass_accent_follow
+import spotube.composeapp.generated.resources.settings_glass_accent_subtitle
+import spotube.composeapp.generated.resources.settings_glass_accent_title
+import spotube.composeapp.generated.resources.settings_glass_reduce_motion_subtitle
+import spotube.composeapp.generated.resources.settings_glass_reduce_motion_title
+import spotube.composeapp.generated.resources.settings_glass_room_light_subtitle
+import spotube.composeapp.generated.resources.settings_glass_room_light_title
+import spotube.composeapp.generated.resources.settings_palette_blue
+import spotube.composeapp.generated.resources.settings_palette_lime
+import spotube.composeapp.generated.resources.settings_palette_orange
+import spotube.composeapp.generated.resources.settings_section_appearance
+
+/** The "follow song" swatch: a colour wheel (mockup `.swatch.auto`), purely decorative. */
+private val FollowSongSweep = listOf(
+    Color(0xFFE88A8A), Color(0xFFE8C37A), Color(0xFF8FE3B5),
+    Color(0xFF8AB8E8), Color(0xFFB59BE8), Color(0xFFE88A8A)
+)
 
 internal fun LazyListScope.appearanceSection(
     settings: UserSettings,
     settingsViewModel: SettingsViewModel,
     includeHeader: Boolean = true) {
-    if (includeHeader) {
-        settingsSectionHeader(Res.string.settings_section_appearance)
-    }
     settingsSectionCard(
+        title = if (includeHeader) Res.string.settings_section_appearance else null,
         items = listOf(
             {
-                AppearanceSettingCard(
-                    selectedPalette = settings.palette,
-                    icon = {
-                        SettingsItemIcon(
-                            Iconsax.IconsaxMagic,
-                            stringResource(Res.string.settings_appearance_title)
-                        )
-                    },
-                    onSaved = { palette ->
-                        settingsViewModel.updateSettings {
-                            copy(palette = palette)
-                        }
+                SettingCardItem(
+                    title = stringResource(Res.string.settings_glass_accent_title),
+                    subtitle = stringResource(Res.string.settings_glass_accent_subtitle),
+                    trailingContent = {
+                        AccentSwatches(
+                            followSong = settings.followSongAccent,
+                            palette = settings.palette,
+                            onFollowSong = {
+                                settingsViewModel.updateSettings { copy(followSongAccent = true) }
+                            },
+                            onPalette = { palette ->
+                                settingsViewModel.updateSettings {
+                                    copy(palette = palette, followSongAccent = false)
+                                }
+                            })
+                    })
+            },
+            {
+                val roomLight = LocalRoomLight.current
+                SwitchSettingCard(
+                    title = stringResource(Res.string.settings_glass_room_light_title),
+                    subtitle = stringResource(Res.string.settings_glass_room_light_subtitle),
+                    checked = settings.roomLightEnabled,
+                    onCheckedChange = { enabled ->
+                        // Immediate feedback; App keeps it in sync with the saved setting.
+                        roomLight.enabled = enabled
+                        settingsViewModel.updateSettings { copy(roomLightEnabled = enabled) }
+                    })
+            },
+            {
+                SwitchSettingCard(
+                    title = stringResource(Res.string.settings_glass_reduce_motion_title),
+                    subtitle = stringResource(Res.string.settings_glass_reduce_motion_subtitle),
+                    checked = settings.reduceMotion,
+                    onCheckedChange = { enabled ->
+                        settingsViewModel.updateSettings { copy(reduceMotion = enabled) }
                     })
             })
     )
@@ -105,136 +131,55 @@ private fun MillenniumPalette.displayLabel(): String = when (this) {
     MillenniumPalette.Lime -> stringResource(Res.string.settings_palette_lime)
 }
 
+/** Follow song, then the fixed accents (Ice / Aqua / Silver = the palette slots). */
 @Composable
-private fun AppearanceSettingCard(
-    selectedPalette: MillenniumPalette,
-    icon: (@Composable () -> Unit)? = null,
-    onSaved: (MillenniumPalette) -> Unit) {
-    var isDialogOpen by remember { mutableStateOf(false) }
-
-    SettingCardItem(
-        title = stringResource(Res.string.settings_appearance_title),
-        subtitle = stringResource(
-            Res.string.settings_appearance_subtitle_palette,
-            selectedPalette.displayLabel()),
-        icon = icon,
-        trailingContent = {
-            PaletteTrailingSwatch(selectedPalette)
-        },
-        onClick = { isDialogOpen = true })
-
-    if (isDialogOpen) {
-        var draftPalette by remember(selectedPalette, isDialogOpen) {
-            mutableStateOf(selectedPalette)
-        }
-
-        MillenniumDialog(visible = true, onDismissRequest = { isDialogOpen = false }) {
-            MillenniumDialogHeader {
-                MillenniumDialogTitle(stringResource(Res.string.settings_palette_dialog_title))
-                MillenniumDialogClose()
-            }
-            MillenniumDialogBody {
-            MillenniumText(
-                stringResource(Res.string.settings_palette_dialog_description),
-                color = AppTheme.colors.onSurfaceVariant)
-            MillenniumText(
-                stringResource(Res.string.settings_palette_label),
-                color = AppTheme.colors.onSurface)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                MillenniumPalette.entries.forEach { palette ->
-                    PaletteSwatch(
-                        palette = palette,
-                        label = palette.displayLabel(),
-                        selected = palette == draftPalette,
-                        onClick = { draftPalette = palette })
-                }
-            }
-
-            PalettePreview(draftPalette)
-            }
-            MillenniumDialogFooter {
-                MillenniumButton(
-                    onClick = { isDialogOpen = false },
-                    style = MillenniumButtonStyle.Secondary) {
-                    MillenniumText(stringResource(Res.string.common_cancel))
-                }
-                MillenniumButton(
-                    onClick = {
-                        onSaved(draftPalette)
-                        isDialogOpen = false
-                    }) {
-                    MillenniumText(stringResource(Res.string.common_save))
-                }
-            }
+private fun AccentSwatches(
+    followSong: Boolean,
+    palette: MillenniumPalette,
+    onFollowSong: () -> Unit,
+    onPalette: (MillenniumPalette) -> Unit) {
+    Row(
+        modifier = Modifier.selectableGroup(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        AccentSwatch(
+            fill = Brush.sweepGradient(FollowSongSweep),
+            label = stringResource(Res.string.settings_glass_accent_follow),
+            selected = followSong,
+            onClick = onFollowSong)
+        MillenniumPalette.entries.forEach { entry ->
+            val accent = remember(entry) { spotubeTokens(entry).accentFill }
+            AccentSwatch(
+                fill = SolidColor(accent),
+                label = entry.displayLabel(),
+                selected = !followSong && entry == palette,
+                onClick = { onPalette(entry) })
         }
     }
 }
 
 @Composable
-private fun PaletteSwatch(
-    palette: MillenniumPalette,
+private fun AccentSwatch(
+    fill: Brush,
     label: String,
     selected: Boolean,
     onClick: () -> Unit) {
-    val accent = remember(palette) { spotubeTokens(palette).accentFill }
+    val colors = AppTheme.colors
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
     Box(
         modifier = Modifier
-            .size(40.dp)
+            .size(30.dp)
+            .keyboardFocusRing(CircleShape)
+            .scale(if (hovered) 1.08f else 1f)
             .clip(CircleShape)
-            .background(accent)
-            .border(
-                width = if (selected) 3.dp else 1.dp,
-                color = if (selected) AppTheme.colors.onSurface else AppTheme.colors.outlineVariant,
-                shape = CircleShape)
-            .clickable(onClick = onClick)
-            .semantics { contentDescription = label })
-}
-
-@Composable
-private fun PaletteTrailingSwatch(palette: MillenniumPalette) {
-    val accent = remember(palette) { spotubeTokens(palette).accentFill }
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            Modifier
-                .size(width = 46.dp, height = 28.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(accent.copy(alpha = 0.35f)))
-        Box(
-            Modifier
-                .size(18.dp)
-                .clip(CircleShape)
-                .background(accent))
-    }
-}
-
-@Composable
-private fun PalettePreview(palette: MillenniumPalette) {
-    val fontFamily = rememberAppFontFamily()
-    val config = remember(palette, fontFamily) { spotubeMillenniumConfig(palette, fontFamily) }
-    MillenniumTheme(dark = true, config = config) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(MillenniumTheme.colors.surface)
-                .border(1.dp, MillenniumTheme.colors.border, RoundedCornerShape(14.dp))
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            MillenniumText(
-                stringResource(Res.string.settings_preview_label),
-                color = MillenniumTheme.colors.muted)
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                MillenniumButton(onClick = {}) {
-                    MillenniumText(stringResource(Res.string.settings_preview_button))
-                }
-                MillenniumButton(onClick = {}, style = MillenniumButtonStyle.Secondary) {
-                    MillenniumText(stringResource(Res.string.settings_preview_secondary))
-                }
-            }
-        }
-    }
+            .background(fill)
+            .border(2.dp, if (selected) colors.onSurface else Color.Transparent, CircleShape)
+            .hoverable(interaction)
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+            .semantics {
+                contentDescription = label
+                role = Role.RadioButton
+                this.selected = selected
+            })
 }

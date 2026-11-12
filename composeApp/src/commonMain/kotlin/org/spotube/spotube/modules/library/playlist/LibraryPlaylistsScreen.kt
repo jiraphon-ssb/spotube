@@ -3,7 +3,18 @@
  */
 package org.spotube.spotube.modules.library.playlist
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import org.spotube.millennium.composables.MillenniumButton
+import org.spotube.millennium.composables.MillenniumButtonStyle
+import org.spotube.spotube.core.ui.theming.AppTheme
+import org.spotube.spotube.modules.shell.LocalAppShellBottomInset
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,6 +40,8 @@ fun LibraryPlaylistsScreen(
     modifier: Modifier = Modifier,
     showCreatePlaylist: Boolean = false,
     viewMode: LibraryViewMode = LibraryViewMode.Grid,
+    /** Opens the create-playlist sheet; offered from the empty state when non-null. */
+    onCreatePlaylist: (() -> Unit)? = null,
     viewModel: LibraryPlaylistsViewModel = koinViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -45,14 +58,42 @@ fun LibraryPlaylistsScreen(
             else -> {
                 val data = current as? LibraryPlaylistsState.Data
                 if (data != null && data.items.isEmpty() && current !is LibraryPlaylistsState.Data.LoadingMore) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(
-                            if (data.query.isNotBlank()) stringResource(
-                                Res.string.library_playlists_no_results,
-                                data.query
-                            )
-                            else stringResource(Res.string.library_playlists_empty)
+                    // Liked Songs is always there, even with no saved playlists: keep it first
+                    // and put the empty message under it.
+                    val list = viewMode == LibraryViewMode.List
+                    Column(
+                        Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(top = 16.dp, bottom = LocalAppShellBottomInset.current + 16.dp)
+                    ) {
+                        LikedTracksCard(
+                            // Grid mode: one crate-sized card, not a full-width poster.
+                            if (list) Modifier.fillMaxWidth() else Modifier.width(184.dp),
+                            listMode = list
                         )
+                        Column(
+                            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(
+                                if (data.query.isNotBlank()) stringResource(
+                                    Res.string.library_playlists_no_results,
+                                    data.query
+                                )
+                                else stringResource(Res.string.library_playlists_empty),
+                                style = AppTheme.typography.bodyMedium,
+                                color = AppTheme.colors.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                            if (data.query.isBlank() && onCreatePlaylist != null) {
+                                MillenniumButton(
+                                    onClick = onCreatePlaylist,
+                                    style = MillenniumButtonStyle.Secondary
+                                ) { Text(stringResource(Res.string.library_action_create_playlist)) }
+                            }
+                        }
                     }
                 } else {
                     LibraryMediaCollection<MetadataPlaylist>(

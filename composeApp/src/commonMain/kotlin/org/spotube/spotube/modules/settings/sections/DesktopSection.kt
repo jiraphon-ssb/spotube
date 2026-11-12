@@ -31,10 +31,8 @@ internal fun LazyListScope.desktopSection(
     settings: UserSettings,
     settingsViewModel: SettingsViewModel,
     includeHeader: Boolean = true) {
-    if (includeHeader) {
-        settingsSectionHeader(Res.string.settings_section_desktop)
-    }
     settingsSectionCard(
+        title = if (includeHeader) Res.string.settings_section_desktop else null,
         items = listOf(
             {
                 SwitchSettingCard(

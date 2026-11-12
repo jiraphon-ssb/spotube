@@ -44,6 +44,7 @@ val TOP_LEVEL_ROUTES: Set<NavKey> = setOf(
     Routes.Home,
     Routes.Search,
     Routes.Library,
+    Routes.Stats,
     Routes.Settings,
     // Bootstrap destination: needs its own back stack when the app starts on it.
     Routes.Welcome)
@@ -54,6 +55,7 @@ val serializersConfig = SavedStateConfiguration {
             subclass(Routes.Home::class, Routes.Home.serializer())
             subclass(Routes.Search::class, Routes.Search.serializer())
             subclass(Routes.Library::class, Routes.Library.serializer())
+            subclass(Routes.Stats::class, Routes.Stats.serializer())
             subclass(Routes.Settings::class, Routes.Settings.serializer())
             subclass(Routes.Plugins::class, Routes.Plugins.serializer())
             subclass(Routes.WebView::class, Routes.WebView.serializer())

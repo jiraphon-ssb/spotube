@@ -22,15 +22,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.TextUnit
-import com.composeunstyled.Text
 import org.spotube.spotube.core.ui.theming.AppTheme
-import org.jetbrains.compose.resources.Font
 import org.jetbrains.compose.resources.stringResource
 import org.spotube.millennium.theme.MillenniumTheme
+import org.spotube.spotube.modules.shell.SpotubeWordmark
 import spotube.composeapp.generated.resources.*
 
 /**
@@ -50,8 +47,8 @@ fun WelcomeTheme(content: @Composable () -> Unit) {
 fun WelcomeBackground(modifier: Modifier = Modifier) {
     val scheme = AppTheme.colors
     Box(
-        modifier.fillMaxSize().background(
-            Brush.verticalGradient(listOf(scheme.surfaceContainer, scheme.surface)))
+        // Flat: both former gradient stops resolve to the same panel colour anyway.
+        modifier.fillMaxSize().background(scheme.surface)
     )
 }
 
@@ -60,10 +57,8 @@ fun WelcomeWordmark(
     modifier: Modifier = Modifier,
     fontSize: TextUnit = AppTheme.typography.displaySmall.fontSize
 ) {
-    Text(
-        stringResource(Res.string.welcome_app_name),
+    SpotubeWordmark(
         modifier = modifier,
-        fontFamily = FontFamily(Font(Res.font.cookie_regular)),
         fontSize = fontSize,
-        color = AppTheme.colors.onSurface)
+        text = stringResource(Res.string.welcome_app_name))
 }

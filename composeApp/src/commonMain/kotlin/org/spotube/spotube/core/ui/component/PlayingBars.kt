@@ -27,7 +27,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -37,7 +39,8 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Three-bar "now playing" equaliser. Bars bounce at different speeds while [playing]; when paused
- * they settle to a still, uneven rest so the row still reads as "this one".
+ * they settle to a still, uneven rest so the row still reads as "this one". The infinite
+ * transition only exists while playing (plus the short settle), so paused rows cost no frames.
  */
 @Composable
 fun PlayingBars(
@@ -45,24 +48,37 @@ fun PlayingBars(
     playing: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val transition = rememberInfiniteTransition(label = "playing_bars")
-    val a by transition.animateFloat(0.25f, 1f, barBounce(520), label = "bar_a")
-    val b by transition.animateFloat(0.9f, 0.3f, barBounce(440), label = "bar_b")
-    val c by transition.animateFloat(0.4f, 0.95f, barBounce(610), label = "bar_c")
-
     // Blend between the live heights and the resting ones so pausing doesn't snap.
-    val live by animateFloatAsState(if (playing) 1f else 0f, tween(260), label = "bars_live")
+    val live = animateFloatAsState(if (playing) 1f else 0f, tween(260), label = "bars_live")
+    val animating by remember(playing) { derivedStateOf { playing || live.value > 0f } }
 
-    // All animated values are read inside the draw block: bars redraw, the row doesn't recompose.
+    if (animating) {
+        val transition = rememberInfiniteTransition(label = "playing_bars")
+        val a = transition.animateFloat(0.25f, 1f, barBounce(520), label = "bar_a")
+        val b = transition.animateFloat(0.9f, 0.3f, barBounce(440), label = "bar_b")
+        val c = transition.animateFloat(0.4f, 0.95f, barBounce(610), label = "bar_c")
+        // Animated values are read inside the draw block: bars redraw, the row doesn't recompose.
+        BarsCanvas(color, modifier) { index ->
+            when (index) {
+                0 -> mixBar(REST[0], a.value, live.value)
+                1 -> mixBar(REST[1], b.value, live.value)
+                else -> mixBar(REST[2], c.value, live.value)
+            }
+        }
+    } else {
+        BarsCanvas(color, modifier) { index -> REST[index] }
+    }
+}
+
+/** Resting bar heights (fraction of the box) shown while paused. */
+private val REST = floatArrayOf(0.35f, 0.75f, 0.5f)
+
+@Composable
+private fun BarsCanvas(color: Color, modifier: Modifier, height: (Int) -> Float) {
     Canvas(modifier = modifier.size(14.dp)) {
-        val heights = listOf(
-            mixBar(0.35f, a, live),
-            mixBar(0.75f, b, live),
-            mixBar(0.5f, c, live)
-        )
         val barWidth = size.width / 5f
-        heights.forEachIndexed { index, fraction ->
-            val h = size.height * fraction
+        for (index in 0 until 3) {
+            val h = size.height * height(index)
             drawRoundRect(
                 color = color,
                 topLeft = Offset(x = index * barWidth * 2f, y = size.height - h),

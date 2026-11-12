@@ -19,32 +19,28 @@ package org.spotube.spotube.modules.settings.sections
 
 
 import org.spotube.millennium.composables.MillenniumIcon
-import org.spotube.millennium.composables.MillenniumSeparator
-import org.spotube.millennium.theme.MillenniumTheme
-import org.spotube.millennium.theme.millenniumPanelBrush
-import org.spotube.millennium.theme.millenniumSurface
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.shape.RoundedCornerShape
 
 import org.spotube.spotube.core.ui.theming.AppTheme
 
 import com.composeunstyled.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.spotube.plugin_interfaces.plugin_apis.audio.AudioFormat
 import org.spotube.plugin_interfaces.plugin_apis.audio.AudioQuality
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
+import org.spotube.spotube.modules.settings.components.GlassGroup
+import org.spotube.spotube.modules.settings.components.GlassRowDivider
 import spotube.composeapp.generated.resources.Res
 import spotube.composeapp.generated.resources.settings_audio_format_label
 import spotube.composeapp.generated.resources.settings_audio_quality_lossless
@@ -91,15 +87,18 @@ internal val downloadFormatPresets = listOf(
             AudioQuality.Lossless(sampleRate = 44_100, channels = 2),
             AudioQuality.Lossless(sampleRate = 48_000, channels = 2))))
 
+/** A small label above a group of cards (Devices uses it between its card lists). */
 internal fun LazyListScope.settingsSectionHeader(title: StringResource) {
     item {
         Text(
             text = stringResource(title),
             style = AppTheme.typography.labelMedium,
-            color = Color.Gray,
+            fontWeight = FontWeight.SemiBold,
+            color = AppTheme.colors.onSurfaceVariant,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(start = 12.dp, end = 12.dp, top = 14.dp, bottom = 6.dp)
+                .semantics { heading() }
         )
     }
 }
@@ -125,17 +124,13 @@ internal fun SettingsPageTitle(title: StringResource) {
 internal fun SettingsItemIcon(
     imageVector: ImageVector,
     contentDescription: String,
-    tint: Color = AppTheme.colors.primary) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(tint.copy(alpha = 0.12f))) {
-        Box(modifier = Modifier.padding(8.dp)) {
-            MillenniumIcon(
-                imageVector = imageVector,
-                contentDescription = contentDescription,
-                tint = tint)
-        }
+    tint: Color = AppTheme.colors.onSurfaceVariant) {
+    // Plain glyph, no coloured tile; the padding keeps the row's 40dp leading slot.
+    Box(modifier = Modifier.padding(8.dp)) {
+        MillenniumIcon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            tint = tint)
     }
 }
 
@@ -193,28 +188,25 @@ internal fun normalizePath(path: String): String {
     return path.trim().trimEnd('/', '\\')
 }
 
+/**
+ * One settings group as a single lazy item: a glass card with [title] (when given) inside it and
+ * the rows separated by hairlines. Every section adds exactly one item through this, which the
+ * wide settings page relies on to scroll its section nav.
+ */
 internal fun LazyListScope.settingsSectionCard(
-    items: List<@Composable () -> Unit>) {
+    items: List<@Composable () -> Unit>,
+    title: StringResource? = null) {
     item {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-                .millenniumSurface(
-                    background = millenniumPanelBrush(MillenniumTheme.colors),
-                    shape = AppTheme.shapes.medium,
-                    borderColor = MillenniumTheme.colors.border,
-                    borderWidth = 1.dp,
-                    shadowElevation = 6.dp)
-                .padding(top = 4.dp, bottom = 4.dp)
+        GlassGroup(
+            title = title?.let { stringResource(it) },
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp)
         ) {
             items.forEachIndexed { index, content ->
                 if (index > 0) {
-                    MillenniumSeparator()
+                    GlassRowDivider()
                 }
                 content()
             }
         }
     }
 }
-

@@ -18,7 +18,20 @@
 package org.spotube.spotube.modules.lyrics
 
 
+import androidx.compose.runtime.MutableLongState
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.withFrameMillis
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import org.spotube.spotube.core.audioplayer.AudioPlayerInterface
+import org.spotube.spotube.core.audioplayer.PlayerState
+import org.spotube.spotube.core.ui.component.cards.isWideShell
+import org.spotube.spotube.modules.shell.LocalAppShellTopInset
 import org.spotube.millennium.composables.MillenniumBarsLoader
+import org.spotube.millennium.composables.MillenniumButton
+import org.spotube.millennium.composables.MillenniumButtonStyle
 import org.spotube.millennium.composables.MillenniumIcon
 import org.spotube.millennium.composables.MillenniumIconButton
 import org.spotube.millennium.composables.MillenniumIconButtonStyle
@@ -35,7 +48,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
@@ -66,7 +79,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.spotube.plugin_interfaces.plugin_apis.lyrics.LyricsLine
+import org.spotube.spotube.core.navigation.NavigationCommands
+import org.spotube.spotube.core.navigation.Routes
 import org.spotube.spotube.core.ui.component.ApplicationBackButton
+import org.spotube.spotube.resources.glyphs.Glyphs
+import org.koin.compose.koinInject
 import org.spotube.spotube.resources.iconsax.Iconsax
 import org.spotube.spotube.resources.iconsax.IconsaxArrowDown4
 import org.jetbrains.compose.resources.stringResource
@@ -78,6 +95,16 @@ import spotube.composeapp.generated.resources.lyrics_mode_synced
 import spotube.composeapp.generated.resources.lyrics_no_plain
 import spotube.composeapp.generated.resources.lyrics_no_synced
 import spotube.composeapp.generated.resources.common_close
+import spotube.composeapp.generated.resources.common_retry
+import spotube.composeapp.generated.resources.lyrics_action_browse_plugins
+import spotube.composeapp.generated.resources.lyrics_action_show_plain
+import spotube.composeapp.generated.resources.lyrics_error_title
+import spotube.composeapp.generated.resources.lyrics_local_body
+import spotube.composeapp.generated.resources.lyrics_local_title
+import spotube.composeapp.generated.resources.lyrics_no_plugin_body
+import spotube.composeapp.generated.resources.lyrics_no_plugin_title
+import spotube.composeapp.generated.resources.lyrics_nothing_playing_body
+import spotube.composeapp.generated.resources.lyrics_nothing_playing_title
 
 @Composable
 fun LyricsScreen(
@@ -89,16 +116,23 @@ fun LyricsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val colors = MillenniumTheme.colors
 
+    // Wide glass shell: transparent (the room light shows through) and clear of the floating
+    // chrome. Embedded in the full player it is transparent too.
+    val wide = isWideShell()
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             // Flat: the accent wash is gone with the rest of the app's gradients.
-            .background(if (embedded) Color.Transparent else colors.background)
+            .background(if (embedded || wide) Color.Transparent else colors.background)
+            .padding(top = if (embedded) 0.dp else LocalAppShellTopInset.current)
     ) {
         val isWide = maxWidth >= 840.dp
 
+        // In the full player the mode switch only matters when both kinds of lyrics exist.
+        val showModeSwitch = !embedded ||
+            (!uiState.syncedLyrics.isNullOrEmpty() && !uiState.plainLyrics.isNullOrBlank())
         Column(Modifier.fillMaxSize()) {
-            Row(
+            if (showModeSwitch) Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 8.dp, vertical = 6.dp),
@@ -116,7 +150,8 @@ fun LyricsScreen(
                                 contentDescription = stringResource(Res.string.common_close)
                             )
                         }
-                    } else {
+                    } else if (!wide) {
+                        // The wide shell has its own floating back button.
                         ApplicationBackButton()
                     }
                 }
@@ -148,23 +183,26 @@ fun LyricsScreen(
                     horizontalArrangement = Arrangement.spacedBy(40.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TrackPane(uiState, Modifier.weight(0.38f))
-                    Column(Modifier.weight(0.62f).fillMaxHeight()) {
-                        LyricsBody(uiState, viewModel)
+                    // Embedded in the full player, which already shows the cover and title.
+                    if (!embedded) TrackPane(uiState, Modifier.weight(0.38f))
+                    Column(Modifier.weight(if (embedded) 1f else 0.62f).fillMaxHeight()) {
+                        LyricsBody(uiState, viewModel, embedded)
                     }
                 }
             } else {
-                CompactTrackHeader(
-                    uiState,
-                    Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)
-                )
+                if (!embedded) {
+                    CompactTrackHeader(
+                        uiState,
+                        Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)
+                    )
+                }
                 Column(
                     Modifier
                         .weight(1f)
                         .fillMaxWidth()
                         .padding(horizontal = 8.dp)
                 ) {
-                    LyricsBody(uiState, viewModel)
+                    LyricsBody(uiState, viewModel, embedded)
                 }
             }
         }
@@ -172,30 +210,102 @@ fun LyricsScreen(
 }
 
 @Composable
-private fun ColumnScope.LyricsBody(uiState: LyricsUiState, viewModel: LyricsViewModel) {
+private fun ColumnScope.LyricsBody(uiState: LyricsUiState, viewModel: LyricsViewModel, embedded: Boolean) {
+    val retry = { viewModel.loadLyrics(forceReload = true) }
     when {
+        uiState.unavailable == LyricsUnavailableReason.NothingPlaying -> LyricsStateMessage(
+            icon = Glyphs.Play,
+            title = stringResource(Res.string.lyrics_nothing_playing_title),
+            body = stringResource(Res.string.lyrics_nothing_playing_body)
+        )
+
+        uiState.unavailable == LyricsUnavailableReason.LocalFile -> LyricsStateMessage(
+            icon = Glyphs.LocalFiles,
+            title = stringResource(Res.string.lyrics_local_title),
+            body = stringResource(Res.string.lyrics_local_body)
+        )
+
+        uiState.unavailable == LyricsUnavailableReason.NoPlugin -> {
+            val navigationCommands: NavigationCommands = koinInject()
+            LyricsStateMessage(
+                icon = Glyphs.Lyrics,
+                title = stringResource(Res.string.lyrics_no_plugin_title),
+                body = stringResource(Res.string.lyrics_no_plugin_body),
+                // From inside the full player the Plugins page would open underneath it.
+                actionLabel = if (embedded) null else stringResource(Res.string.lyrics_action_browse_plugins),
+                onAction = { navigationCommands.navigateTo(Routes.Plugins) }
+            )
+        }
+
         uiState.isLoading -> CenteredMessage {
             MillenniumBarsLoader(size = 48.dp)
         }
 
-        uiState.error != null -> CenteredMessage {
-            Text(
-                text = uiState.error ?: stringResource(Res.string.common_unknown_error),
-                style = AppTheme.typography.bodyLarge,
-                color = MillenniumTheme.colors.danger,
-                textAlign = TextAlign.Center
-            )
-        }
+        uiState.error != null -> LyricsStateMessage(
+            icon = Glyphs.Lyrics,
+            title = stringResource(Res.string.lyrics_error_title),
+            body = uiState.error?.takeIf { it.isNotBlank() }
+                ?: stringResource(Res.string.common_unknown_error),
+            actionLabel = stringResource(Res.string.common_retry),
+            onAction = retry
+        )
 
         uiState.mode == LyricType.SYNCED -> SyncedLyricsContent(
             syncedLyrics = uiState.syncedLyrics ?: emptyList(),
             currentIndex = uiState.currentIndex,
-            onLineClick = viewModel::seekToLine
+            onLineClick = viewModel::seekToLine,
+            hasPlain = !uiState.plainLyrics.isNullOrBlank(),
+            onShowPlain = { viewModel.setMode(LyricType.STATIC) },
+            onRetry = retry
         )
 
         uiState.mode == LyricType.STATIC -> PlainLyricsContent(
-            plainLyrics = uiState.plainLyrics ?: ""
+            plainLyrics = uiState.plainLyrics ?: "",
+            onRetry = retry
         )
+    }
+}
+
+/** Icon, short title, muted body and an optional single action, centred in the lyrics area. */
+@Composable
+private fun ColumnScope.LyricsStateMessage(
+    icon: ImageVector,
+    title: String,
+    body: String,
+    actionLabel: String? = null,
+    onAction: () -> Unit = {}) {
+    CenteredMessage {
+        Column(
+            modifier = Modifier.widthIn(max = 360.dp).padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            MillenniumIcon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = AppTheme.colors.onSurfaceVariant,
+                modifier = Modifier.size(28.dp)
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = title,
+                style = AppTheme.typography.titleMedium,
+                color = AppTheme.colors.onSurface,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = body,
+                style = AppTheme.typography.bodyMedium,
+                color = AppTheme.colors.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+            if (actionLabel != null) {
+                Spacer(Modifier.height(8.dp))
+                MillenniumButton(onClick = onAction, style = MillenniumButtonStyle.Secondary) {
+                    Text(actionLabel)
+                }
+            }
+        }
     }
 }
 
@@ -233,7 +343,7 @@ private fun TrackPane(uiState: LyricsUiState, modifier: Modifier = Modifier) {
             url = uiState.coverUrl,
             size = 280.dp,
             radius = 24.dp,
-            elevation = 14.dp
+            elevation = 0.dp
         )
         Spacer(Modifier.height(24.dp))
         Text(
@@ -263,7 +373,7 @@ private fun CompactTrackHeader(uiState: LyricsUiState, modifier: Modifier = Modi
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        CoverArt(url = uiState.coverUrl, size = 48.dp, radius = 12.dp, elevation = 4.dp)
+        CoverArt(url = uiState.coverUrl, size = 48.dp, radius = 12.dp, elevation = 0.dp)
         Column(Modifier.weight(1f)) {
             Text(
                 text = uiState.trackTitle,
@@ -295,39 +405,41 @@ private fun ColumnScope.CenteredMessage(content: @Composable () -> Unit) {
 private fun ColumnScope.SyncedLyricsContent(
     syncedLyrics: List<LyricsLine>,
     currentIndex: Int,
-    onLineClick: (LyricsLine) -> Unit) {
+    onLineClick: (LyricsLine) -> Unit,
+    hasPlain: Boolean,
+    onShowPlain: () -> Unit,
+    onRetry: () -> Unit) {
     if (syncedLyrics.isEmpty()) {
-        CenteredMessage {
-            Text(
-                text = stringResource(Res.string.lyrics_no_synced),
-                style = AppTheme.typography.bodyLarge,
-                color = MillenniumTheme.colors.muted,
-                textAlign = TextAlign.Center
-            )
-        }
+        EmptyLyricsMessage(
+            text = stringResource(Res.string.lyrics_no_synced),
+            actionLabel = stringResource(
+                if (hasPlain) Res.string.lyrics_action_show_plain else Res.string.common_retry),
+            onAction = if (hasPlain) onShowPlain else onRetry
+        )
         return
     }
 
+    val position = rememberSmoothPositionMillis()
+    val positionMillis = remember(position) { { position.longValue } }
     SyncedLyricsList(
         lines = syncedLyrics,
         currentIndex = currentIndex,
         onLineClick = onLineClick,
-        modifier = Modifier.weight(1f).fillMaxWidth()
+        modifier = Modifier.weight(1f).fillMaxWidth(),
+        positionMillis = positionMillis
     )
 }
 
 @Composable
 private fun ColumnScope.PlainLyricsContent(
-    plainLyrics: String) {
+    plainLyrics: String,
+    onRetry: () -> Unit) {
     if (plainLyrics.isBlank()) {
-        CenteredMessage {
-            Text(
-                text = stringResource(Res.string.lyrics_no_plain),
-                style = AppTheme.typography.bodyLarge,
-                color = MillenniumTheme.colors.muted,
-                textAlign = TextAlign.Center
-            )
-        }
+        EmptyLyricsMessage(
+            text = stringResource(Res.string.lyrics_no_plain),
+            actionLabel = stringResource(Res.string.common_retry),
+            onAction = onRetry
+        )
         return
     }
 
@@ -345,4 +457,51 @@ private fun ColumnScope.PlainLyricsContent(
             )
         }
     }
+}
+
+@Composable
+private fun ColumnScope.EmptyLyricsMessage(text: String, actionLabel: String, onAction: () -> Unit) {
+    CenteredMessage {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = text,
+                style = AppTheme.typography.bodyLarge,
+                color = AppTheme.colors.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+            MillenniumButton(onClick = onAction, style = MillenniumButtonStyle.Quiet) {
+                Text(actionLabel)
+            }
+        }
+    }
+}
+
+/**
+ * Playback position for the karaoke fill, advanced every frame between the player's position
+ * updates while playing. Only the draw phase reads it, so nothing recomposes per frame.
+ */
+@Composable
+private fun rememberSmoothPositionMillis(
+    audioPlayer: AudioPlayerInterface = koinInject()
+): MutableLongState {
+    val position = remember(audioPlayer) {
+        mutableLongStateOf(audioPlayer.positionFlow.value.inWholeMilliseconds)
+    }
+    LaunchedEffect(audioPlayer) {
+        combine(audioPlayer.positionFlow, audioPlayer.playerStateFlow) { at, state -> at to state }
+            .collectLatest { (at, state) ->
+                val base = at.inWholeMilliseconds
+                position.longValue = base
+                if (state == PlayerState.PLAYING) {
+                    val start = withFrameMillis { it }
+                    while (true) {
+                        withFrameMillis { now -> position.longValue = base + (now - start) }
+                    }
+                }
+            }
+    }
+    return position
 }

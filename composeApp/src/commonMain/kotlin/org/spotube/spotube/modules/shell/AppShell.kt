@@ -81,15 +81,25 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.spotube.millennium.composables.MillenniumSeparator
 import org.spotube.millennium.composables.MillenniumSnackbarHost
 import org.spotube.millennium.composables.MillenniumSnackbarHostState
+import org.spotube.millennium.composables.MillenniumSnackbarResult
 import org.spotube.millennium.theme.MillenniumTheme
+import org.jetbrains.compose.resources.stringResource
+import spotube.composeapp.generated.resources.Res
+import spotube.composeapp.generated.resources.shell_toast_undo
 
+/**
+ * Space at the bottom of the window covered by the shell's player chrome (the floating dock in
+ * the wide layout, the mini player + bottom bar in the compact one). Pages draw under it and pad
+ * their last item by this much.
+ */
 val LocalAppShellBottomInset = staticCompositionLocalOf { 0.dp }
 
 /**
- * Narrowest window that can show the now-playing info panel ([AppSidePlayer]) next to the content:
- * sidebar (240) + panel (320) still leaves ~540dp for content.
+ * Space the wide shell's floating chrome takes at the top of the window (back button, nav
+ * capsule, avatar). Pages draw under it and pad their first item by this much. 0 in the compact
+ * layout.
  */
-private val SidePlayerMinWindowWidth = 1100.dp
+val LocalAppShellTopInset = staticCompositionLocalOf { 0.dp }
 
 @Composable
 fun AppShell(
@@ -111,8 +121,9 @@ fun AppShell(
     val isQueueVisible by queueViewModel.isQueueVisible.collectAsState()
     val isAlternativeVisible by alternativeViewModel.isAlternativeVisible.collectAsState()
     val isLyricsOverlayVisible by viewModel.isLyricsOverlayVisible.collectAsState()
-    val isFullPlayerVisible by viewModel.isFullPlayerVisible.collectAsState()
-    val isNowPlayingPanelVisible by viewModel.isNowPlayingPanelVisible.collectAsState()
+    val shellActions = remember(viewModel) { ViewModelShellActions(viewModel) }
+    // Provided by App (enabled flag driven by Settings); the default instance outside it.
+    val roomLight = LocalRoomLight.current
 
     LaunchedEffect(navigatorCommands, navigator) {
         launch {
@@ -144,119 +155,49 @@ fun AppShell(
     PlayDestinationPickerHost()
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        // Wide windows get the floating glass shell (no sidebar); narrow ones keep the compact
+        // layout with the bottom bar and the draggable player sheet.
         val useSidebar = viewModel.useSidebar()
-        // Wide windows dock the full player as a right-hand panel; narrower ones keep the
-        // bottom bar so the content column never gets squeezed below a usable width.
-        val dockPlayer = useSidebar && maxWidth >= SidePlayerMinWindowWidth
         val chromeUiState by viewModel.compactChromeUiState.collectAsState()
         val density = LocalDensity.current
         val navigationBarInset = with(density) {
             WindowInsets.navigationBars.getBottom(this).toDp()
         }
-        val bottomOverlayInset =
-            viewModel.bottomOverlayInset(useSidebar, navigationBarInset, chromeUiState)
+        val bottomOverlayInset = if (useSidebar) {
+            PlayerDockClearance
+        } else {
+            viewModel.bottomOverlayInset(false, navigationBarInset, chromeUiState)
+        }
 
-        // With a sidebar the transport bar sits *below* the content in a Column, so content needs
-        // no bottom padding; the overlay inset is still used to lift the snackbar above the bar.
-        val contentBottomInset = if (useSidebar) 0.dp else bottomOverlayInset
-        CompositionLocalProvider(LocalAppShellBottomInset provides contentBottomInset) {
+        // The compact layout has no toast host: show shell toasts as snackbars there.
+        val undoText = stringResource(Res.string.shell_toast_undo)
+        LaunchedEffect(viewModel, useSidebar) {
+            if (useSidebar) return@LaunchedEffect
+            viewModel.toasts.collect { toast ->
+                val undo = toast.undo
+                val result = snackbarHostState.showSnackbar(
+                    message = toast.message,
+                    actionLabel = if (undo != null) undoText else null
+                )
+                if (result == MillenniumSnackbarResult.ActionPerformed) undo?.invoke()
+            }
+        }
+
+        CompositionLocalProvider(
+            LocalAppShellBottomInset provides bottomOverlayInset,
+            LocalAppShellTopInset provides if (useSidebar) WideShellTopInset else 0.dp,
+            LocalShellActions provides shellActions,
+            LocalRoomLight provides roomLight
+        ) {
             if (useSidebar) {
-
-                Box(modifier = Modifier.fillMaxSize()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(MillenniumTheme.colors.background)
-                    )
-                    // Transport always lives in the bottom bar; the right-hand panel is optional
-                    // now-playing info (artwork, up next) on wide windows. Neither is composed
-                    // under the full-window player (they share PlayerOptionsViewModel).
-                    val showInfoPanel = dockPlayer && isNowPlayingPanelVisible && !isFullPlayerVisible
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        Row(modifier = Modifier.weight(1f)) {
-                            AppSidebar(
-                                navigator = navigator,
-                                navigationState = navigationState
-                            )
-                            MillenniumSeparator(
-                                modifier = Modifier.fillMaxHeight(),
-                                vertical = true
-                            )
-                            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                                content()
-                            }
-                            if (showInfoPanel) {
-                                MillenniumSeparator(
-                                    modifier = Modifier.fillMaxHeight(),
-                                    vertical = true
-                                )
-                                AppSidePlayer(
-                                    onQueue = queueViewModel::toggleQueueVisibility,
-                                    onExpand = viewModel::showFullPlayer,
-                                    onClose = viewModel::toggleNowPlayingPanel
-                                )
-                            }
-                        }
-                        if (!isFullPlayerVisible) AppLargePlayer(
-                            modifier = Modifier.fillMaxWidth(),
-                            onQueue = queueViewModel::toggleQueueVisibility,
-                            onAlternativeSource = alternativeViewModel::toggleAlternativeVisibility,
-                            onLyrics = { navigatorCommands.navigateTo(Routes.Lyrics) },
-                            onExpand = viewModel::showFullPlayer,
-                            panelVisible = showInfoPanel,
-                            onTogglePanel = if (dockPlayer) viewModel::toggleNowPlayingPanel else null
-                        )
-                    }
-
-                    // Full-window player sits under the queue / alternative-source sheets so
-                    // those still open on top of it.
-                    if (isFullPlayerVisible) {
-                        AppFullPlayer(
-                            onCollapse = viewModel::hideFullPlayer,
-                            onAlternativeSource = alternativeViewModel::toggleAlternativeVisibility
-                        )
-                    }
-
-                    if (isQueueVisible) {
-                        Box(
-                            modifier = Modifier.fillMaxSize().clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = { queueViewModel.setQueueVisibility(false) })
-                        )
-                    }
-
-                    if (isAlternativeVisible) {
-                        Box(
-                            modifier = Modifier.fillMaxSize().clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = { alternativeViewModel.setAlternativeVisibility(false) })
-                        )
-                    }
-
-                    QueueSheet(
-                        isVisible = isQueueVisible,
-                        onDismiss = { queueViewModel.setQueueVisibility(false) },
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        PlayerQueueContent(
-                            viewModel = queueViewModel,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-
-                    AlternativeTrackSheet(
-                        isVisible = isAlternativeVisible,
-                        onDismiss = { alternativeViewModel.setAlternativeVisibility(false) },
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        AlternativeTrackContent(
-                            viewModel = alternativeViewModel,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                }
+                WideAppShell(
+                    navigator = navigator,
+                    navigationState = navigationState,
+                    viewModel = viewModel,
+                    queueViewModel = queueViewModel,
+                    alternativeViewModel = alternativeViewModel,
+                    content = content
+                )
             } else {
                 Box(modifier = Modifier.fillMaxSize()) {
                     Box(
@@ -320,7 +261,7 @@ fun AppShell(
         }
 
         // Drawn last so it floats above the players/sheets, just above the
-        // bottom overlay (large player or compact player + bottombar).
+        // bottom overlay (the dock, or the compact player + bottombar).
         MillenniumSnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier

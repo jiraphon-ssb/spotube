@@ -24,7 +24,6 @@ import androidx.compose.foundation.lazy.LazyListScope
 import org.spotube.spotube.core.ui.theming.AppTheme
 import com.composeunstyled.Text
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import compose.icons.FeatherIcons
 import compose.icons.feathericons.ChevronRight
 import compose.icons.feathericons.Package
@@ -39,8 +38,8 @@ import org.jetbrains.compose.resources.stringResource
 internal fun LazyListScope.pluginsSection(
     navigatorCommands: NavigationCommands
 ) {
-    settingsSectionHeader(Res.string.settings_section_plugins)
     settingsSectionCard(
+        title = Res.string.settings_section_plugins,
         items = listOf {
             SettingCardItem(
                 title = stringResource(Res.string.settings_plugins_manage_title),
@@ -48,8 +47,7 @@ internal fun LazyListScope.pluginsSection(
                 icon = {
                     SettingsItemIcon(
                         Iconsax.IconsaxBoxAdd,
-                        stringResource(Res.string.settings_section_plugins),
-                        Color(0xFFFF9800)
+                        stringResource(Res.string.settings_section_plugins)
                     )
                 },
                 trailingContent = {
