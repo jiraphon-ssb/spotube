@@ -33,9 +33,11 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -87,8 +89,9 @@ internal val WideShellTopInset = 76.dp
 /** Toast baseline: just above the dock (mockup: bottom 112px). */
 private val ToastBottom = 112.dp
 
-/** Below this width the nav capsule's search field narrows so it clears the corner buttons. */
-private val CompactNavWidth = 1040.dp
+/** Narrow windows: the top buttons shrink to 36dp and centre on the macOS traffic lights. */
+private val NarrowChromeTop = 8.dp
+private val NarrowChromeButton = 36.dp
 
 /**
  * The wide (desktop) layout: no sidebar, pages take the whole window over the [RoomLight], with
@@ -215,6 +218,15 @@ internal fun WideAppShell(
                 }
             }
     ) {
+        val chrome = shellChromeFor(maxWidth)
+        val narrow = chrome.widthClass == ShellWidthClass.Narrow
+        val chromeTop = if (narrow) NarrowChromeTop else ChromeTop
+        val chromeButton = if (narrow) NarrowChromeButton else 40.dp
+        // The mini card does not fit a narrow window: leave it when the window gets that small.
+        LaunchedEffect(chrome.miniPlayer, mini) {
+            if (!chrome.miniPlayer && mini) viewModel.setMini(false)
+        }
+
         RoomLight(currentCoverModel = currentEntry?.artworkModel, modifier = Modifier.fillMaxSize())
 
         Box(
@@ -232,18 +244,21 @@ internal fun WideAppShell(
         if (!isFullPlayerVisible) {
             AnimatedVisibility(
                 visible = !mini && canGoBack,
-                modifier = Modifier.align(Alignment.TopStart).padding(start = leftInset, top = ChromeTop),
+                modifier = Modifier.align(Alignment.TopStart).padding(start = leftInset, top = chromeTop),
                 enter = fadeIn(tween(300)),
                 exit = fadeOut(tween(300))
             ) {
-                ShellBackButton(onClick = {
-                    menuOpen = false
-                    navigator.pop()
-                })
+                ShellBackButton(
+                    onClick = {
+                        menuOpen = false
+                        navigator.pop()
+                    },
+                    size = chromeButton
+                )
             }
             AnimatedVisibility(
-                visible = !mini,
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = ChromeTop),
+                visible = !mini && chrome.capsule != CapsuleMode.Hidden,
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = chromeTop),
                 enter = fadeIn(tween(400)) + slideInVertically(tween(500)) { -it },
                 exit = fadeOut(tween(400)) + slideOutVertically(tween(500)) { -it }
             ) {
@@ -255,27 +270,50 @@ internal fun WideAppShell(
                         viewModel.openPalette()
                     },
                     modifier = Modifier.blockPointerPassThrough(),
-                    compact = maxWidth < CompactNavWidth
+                    mode = chrome.capsule
                 )
             }
             AnimatedVisibility(
                 visible = !mini,
-                modifier = Modifier.align(Alignment.TopEnd).padding(end = rightInset, top = ChromeTop),
+                modifier = Modifier.align(Alignment.TopEnd).padding(end = rightInset, top = chromeTop),
                 enter = fadeIn(tween(400)),
                 exit = fadeOut(tween(400))
             ) {
-                OtherMenuButton(onClick = { menuOpen = !menuOpen })
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Narrow has no capsule: search (the palette) moves next to the menu button.
+                    if (narrow) {
+                        ShellSearchButton(
+                            onClick = {
+                                menuOpen = false
+                                viewModel.openPalette()
+                            },
+                            size = chromeButton
+                        )
+                    }
+                    OtherMenuButton(onClick = { menuOpen = !menuOpen }, size = chromeButton)
+                }
             }
 
-            PlayerDock(
-                mini = mini,
-                onOpenNowPlaying = ::openNowPlaying,
-                onOpenSound = viewModel::toggleSound,
-                onOpenQueue = viewModel::toggleQueue,
-                onToggleMini = viewModel::toggleMini,
-                modifier = Modifier.fillMaxSize(),
-                audioPlayerQueue = audioPlayerQueue
-            )
+            if (chrome.tabBar) {
+                NarrowDock(
+                    currentRoute = navigationState.topLevelRoute,
+                    onNavigate = ::navigateTo,
+                    onOpenNowPlaying = ::openNowPlaying,
+                    modifier = Modifier.fillMaxSize(),
+                    audioPlayerQueue = audioPlayerQueue
+                )
+            } else {
+                PlayerDock(
+                    mini = mini,
+                    onOpenNowPlaying = ::openNowPlaying,
+                    onOpenSound = viewModel::toggleSound,
+                    onOpenQueue = viewModel::toggleQueue,
+                    onToggleMini = viewModel::toggleMini,
+                    modifier = Modifier.fillMaxSize(),
+                    widthClass = chrome.widthClass,
+                    audioPlayerQueue = audioPlayerQueue
+                )
+            }
         }
 
         if (menuOpen) {
@@ -289,7 +327,8 @@ internal fun WideAppShell(
         }
         AnimatedVisibility(
             visible = menuOpen && !isFullPlayerVisible,
-            modifier = Modifier.align(Alignment.TopEnd).padding(top = 64.dp, end = rightInset),
+            modifier = Modifier.align(Alignment.TopEnd)
+                .padding(top = chromeTop + chromeButton + 8.dp, end = rightInset),
             enter = fadeIn(tween(180)) + scaleIn(
                 animationSpec = tween(250),
                 initialScale = 0.98f,
@@ -401,7 +440,8 @@ internal fun WideAppShell(
 
         ToastHost(
             toasts = viewModel.toasts,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = ToastBottom)
+            modifier = Modifier.align(Alignment.BottomCenter)
+                .padding(bottom = if (chrome.widthClass == ShellWidthClass.Full) ToastBottom else chrome.bottomInset)
         )
     }
 }

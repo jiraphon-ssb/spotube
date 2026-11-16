@@ -44,6 +44,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -77,7 +79,8 @@ private val FieldFill = Color.White.copy(alpha = 0.05f)
  * (⌘K / Ctrl K).
  *
  * @param currentRoute the active top-level route, for the selected plate.
- * @param compact narrows the search field for tight windows.
+ * @param mode [CapsuleMode.Compact] narrows the search field; [CapsuleMode.Icons] keeps only the
+ *   selected destination's label and turns search into an icon button.
  */
 @Composable
 fun TopNavCapsule(
@@ -85,9 +88,10 @@ fun TopNavCapsule(
     onNavigate: (Routes) -> Unit,
     onOpenPalette: () -> Unit,
     modifier: Modifier = Modifier,
-    compact: Boolean = false
+    mode: CapsuleMode = CapsuleMode.Full
 ) {
     val colors = AppTheme.colors
+    val iconsOnly = mode == CapsuleMode.Icons
     Row(
         modifier = modifier
             .shellGlass(PillShape, fill = shellGlassFill(), border = colors.outline, elevation = 16.dp)
@@ -100,25 +104,39 @@ fun TopNavCapsule(
             icon = Glyphs.Home,
             label = stringResource(Res.string.shell_nav_home),
             selected = currentRoute == Routes.Home,
-            onClick = { onNavigate(Routes.Home) }
+            onClick = { onNavigate(Routes.Home) },
+            iconsOnly = iconsOnly
         )
         NavPill(
             icon = Glyphs.Library,
             label = stringResource(Res.string.shell_nav_library),
             selected = currentRoute == Routes.Library,
-            onClick = { onNavigate(Routes.Library) }
+            onClick = { onNavigate(Routes.Library) },
+            iconsOnly = iconsOnly
         )
         NavPill(
             icon = Glyphs.Stats,
             label = stringResource(Res.string.shell_nav_stats),
             selected = currentRoute == Routes.Stats,
-            onClick = { onNavigate(Routes.Stats) }
+            onClick = { onNavigate(Routes.Stats) },
+            iconsOnly = iconsOnly
         )
-        SearchPill(
-            width = if (compact) 150.dp else 220.dp,
-            selected = currentRoute == Routes.Search,
-            onClick = onOpenPalette
-        )
+        if (iconsOnly) {
+            NavPill(
+                icon = Glyphs.Search,
+                label = stringResource(Res.string.shell_nav_search),
+                selected = currentRoute == Routes.Search,
+                onClick = onOpenPalette,
+                iconsOnly = true,
+                isTab = false
+            )
+        } else {
+            SearchPill(
+                width = if (mode == CapsuleMode.Compact) 150.dp else 220.dp,
+                selected = currentRoute == Routes.Search,
+                onClick = onOpenPalette
+            )
+        }
     }
 }
 
@@ -142,41 +160,63 @@ private fun pillColors(selected: Boolean, hovered: Boolean, rest: Color): Pair<C
     return background to content
 }
 
+/**
+ * One destination. With [iconsOnly] an unselected pill is a 34dp round icon (its label becomes
+ * the accessible name); the selected one keeps its label so the capsule still says where you
+ * are. [isTab] = false makes it a plain button (search).
+ */
 @Composable
 private fun NavPill(
     icon: ImageVector,
     label: String,
     selected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    iconsOnly: Boolean = false,
+    isTab: Boolean = true
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val hovered by interactionSource.collectIsHoveredAsState()
     val (background, content) = pillColors(selected, hovered, Color.Transparent)
+    val showLabel = !iconsOnly || selected
+    val action = if (isTab) {
+        Modifier.selectable(
+            selected = selected,
+            interactionSource = interactionSource,
+            indication = null,
+            role = Role.Tab,
+            onClick = onClick
+        )
+    } else {
+        Modifier.clickable(
+            interactionSource = interactionSource,
+            indication = null,
+            role = Role.Button,
+            onClick = onClick
+        )
+    }
     Row(
         modifier = Modifier
             .height(34.dp)
+            .then(if (showLabel) Modifier else Modifier.width(34.dp))
             .keyboardFocusRing(PillShape)
             .clip(PillShape)
             .background(background)
             .hoverable(interactionSource)
-            .selectable(
-                selected = selected,
-                interactionSource = interactionSource,
-                indication = null,
-                role = Role.Tab,
-                onClick = onClick
-            )
-            .padding(horizontal = 15.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            .then(action)
+            .then(if (showLabel) Modifier else Modifier.semantics { contentDescription = label })
+            .padding(horizontal = if (showLabel) 15.dp else 0.dp),
+        horizontalArrangement = if (showLabel) Arrangement.spacedBy(8.dp) else Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
         MillenniumIcon(icon, contentDescription = null, tint = content, size = 17.dp)
-        Text(
-            text = label,
-            style = AppTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-            color = content,
-            maxLines = 1
-        )
+        if (showLabel) {
+            Text(
+                text = label,
+                style = AppTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                color = content,
+                maxLines = 1
+            )
+        }
     }
 }
 
@@ -229,17 +269,36 @@ private fun SearchPill(width: Dp, selected: Boolean, onClick: () -> Unit) {
 
 /** Round glass back button shown at the top-left while there is somewhere to go back to. */
 @Composable
-fun ShellBackButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun ShellBackButton(onClick: () -> Unit, modifier: Modifier = Modifier, size: Dp = 40.dp) {
     GlassRoundButton(
         label = stringResource(Res.string.shell_back),
         onClick = onClick,
-        modifier = modifier
+        modifier = modifier,
+        size = size
     ) {
         MillenniumIcon(
             Glyphs.ChevronLeft,
             contentDescription = null,
             tint = AppTheme.colors.onSurface,
             size = 18.dp
+        )
+    }
+}
+
+/** Round glass search button (opens the command palette); narrow windows, where the capsule is gone. */
+@Composable
+internal fun ShellSearchButton(onClick: () -> Unit, modifier: Modifier = Modifier, size: Dp = 40.dp) {
+    GlassRoundButton(
+        label = stringResource(Res.string.shell_nav_search),
+        onClick = onClick,
+        modifier = modifier,
+        size = size
+    ) {
+        MillenniumIcon(
+            Glyphs.Search,
+            contentDescription = null,
+            tint = AppTheme.colors.onSurface,
+            size = 17.dp
         )
     }
 }

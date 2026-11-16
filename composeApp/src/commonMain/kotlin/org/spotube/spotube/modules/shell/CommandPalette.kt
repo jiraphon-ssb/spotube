@@ -35,7 +35,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -375,8 +375,14 @@ internal fun CommandPalette(
         Column(
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .padding(top = 110.dp)
-                .width(660.dp)
+                // Narrow windows: tuck under the top buttons and keep 12dp from the sides.
+                .padding(
+                    top = if (LocalShellWidthClass.current == ShellWidthClass.Narrow) 56.dp else 110.dp,
+                    start = 12.dp,
+                    end = 12.dp
+                )
+                .widthIn(max = 660.dp)
+                .fillMaxWidth()
                 .shellGlass(
                     PaletteShape,
                     fill = Color(0xFF121821).copy(alpha = 0.92f),

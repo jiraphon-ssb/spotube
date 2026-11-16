@@ -47,6 +47,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.composeunstyled.Text
@@ -77,11 +78,12 @@ internal val OtherMenuWidth = 250.dp
  * profile to read (metadata plugins expose no "me" endpoint), so it shows a person glyph.
  */
 @Composable
-internal fun OtherMenuButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun OtherMenuButton(onClick: () -> Unit, modifier: Modifier = Modifier, size: Dp = 40.dp) {
     GlassRoundButton(
         label = stringResource(Res.string.shell_menu_open),
         onClick = onClick,
-        modifier = modifier
+        modifier = modifier,
+        size = size
     ) {
         MillenniumIcon(
             Glyphs.Person,

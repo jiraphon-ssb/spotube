@@ -29,6 +29,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
@@ -80,6 +81,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
@@ -146,6 +148,7 @@ private val MiniHeight = 154.dp
 private val MiniMargin = 20.dp
 private const val DOCK_RADIUS = 30f
 private const val MINI_RADIUS = 24f
+private const val MEDIUM_DOCK_RADIUS = 22f
 
 /** One turn of the cover disc while playing. */
 private const val DISC_TURN_MILLIS = 9_000
@@ -170,6 +173,10 @@ internal val PlayerDockClearance = DockBottomMargin + DockHeight + 18.dp
  * and lyric on top, previous/play/next in the middle, waveform at the bottom, and a button that
  * returns to the full window.
  *
+ * At [ShellWidthClass.Medium] the capsule is one 68dp row spanning the window (12dp margins):
+ * cover and title, previous/play/next, then lyrics, queue, sound and mini, with a thin progress
+ * line along the top edge instead of the waveform. Narrow windows use [NarrowDock] instead.
+ *
  * Fill the window with [modifier]: the dock positions itself, and only its own rectangle takes
  * pointer input.
  */
@@ -181,6 +188,7 @@ fun PlayerDock(
     onOpenQueue: () -> Unit,
     onToggleMini: () -> Unit,
     modifier: Modifier = Modifier,
+    widthClass: ShellWidthClass = ShellWidthClass.Full,
     audioPlayerQueue: AudioPlayerQueue = koinInject(),
     lyricsViewModel: LyricsViewModel = koinViewModel(),
     savedTracksViewModel: SavedTracksViewModel = koinViewModel<SavedTracksViewModel>(
@@ -222,12 +230,15 @@ fun PlayerDock(
         label = "dock_mini"
     )
     val showMiniContent by remember { derivedStateOf { progress.value > 0.5f } }
-    val shape = remember(progress) { DockShape(progress) }
+    val medium = widthClass == ShellWidthClass.Medium
+    val shape = remember(progress, medium) {
+        DockShape(progress, if (medium) MEDIUM_DOCK_RADIUS else DOCK_RADIUS)
+    }
 
     Box(modifier = modifier) {
         Box(
             modifier = Modifier
-                .dockPlacement(progress)
+                .dockPlacement(progress, medium)
                 .shellGlass(shape, fill = shellGlassFill(alpha = 0.82f), border = colors.outline, elevation = 28.dp)
                 .blockPointerPassThrough()
         ) {
@@ -248,6 +259,16 @@ fun PlayerDock(
                         waveSeed = waveSeed,
                         onOpenNowPlaying = onOpenNowPlaying,
                         onExitMini = onToggleMini
+                    )
+                } else if (medium) {
+                    MediumDockContent(
+                        player = player,
+                        subLine = subLine,
+                        upcoming = upcoming,
+                        onOpenNowPlaying = onOpenNowPlaying,
+                        onOpenSound = onOpenSound,
+                        onOpenQueue = onOpenQueue,
+                        onToggleMini = onToggleMini
                     )
                 } else {
                     FullDockContent(
@@ -275,19 +296,26 @@ private data class DockSubLine(val text: String, val isLyric: Boolean)
  * Sizes and places the dock between its capsule and mini-card rectangles. Reads [progress] in
  * the layout phase only, so the morph relayouts without recomposing.
  */
-private fun Modifier.dockPlacement(progress: State<Float>): Modifier = layout { measurable, constraints ->
+private fun Modifier.dockPlacement(progress: State<Float>, medium: Boolean): Modifier = layout { measurable, constraints ->
     val p = progress.value
     val fullW = constraints.maxWidth
     val fullH = constraints.maxHeight
-    val normalW = min(DockMaxWidth.roundToPx(), fullW - DockSideClearance.roundToPx()).coerceAtLeast(0)
-    val normalH = DockHeight.roundToPx()
+    val normalW = (
+        if (medium) {
+            fullW - 2 * MediumDockMargin.roundToPx()
+        } else {
+            min(DockMaxWidth.roundToPx(), fullW - DockSideClearance.roundToPx())
+        }
+        ).coerceAtLeast(0)
+    val normalH = (if (medium) MediumDockHeight else DockHeight).roundToPx()
+    val normalBottom = (if (medium) MediumDockMargin else DockBottomMargin).roundToPx()
     val miniW = MiniWidth.roundToPx()
     val miniH = MiniHeight.roundToPx()
     val w = lerpInt(normalW, miniW, p).coerceIn(0, fullW)
     val h = lerpInt(normalH, miniH, p).coerceIn(0, fullH)
     val x = lerpInt((fullW - normalW) / 2, fullW - MiniMargin.roundToPx() - miniW, p)
     val y = lerpInt(
-        fullH - DockBottomMargin.roundToPx() - normalH,
+        fullH - normalBottom - normalH,
         fullH - MiniMargin.roundToPx() - miniH,
         p
     )
@@ -298,10 +326,10 @@ private fun Modifier.dockPlacement(progress: State<Float>): Modifier = layout { 
 private fun lerpInt(start: Int, stop: Int, fraction: Float): Int =
     (start + (stop - start) * fraction).roundToInt()
 
-/** Rounded rectangle whose radius follows the mini morph (30dp capsule → 24dp card). */
-private class DockShape(private val progress: State<Float>) : Shape {
+/** Rounded rectangle whose radius follows the mini morph ([normalRadius] → 24dp card). */
+private class DockShape(private val progress: State<Float>, private val normalRadius: Float) : Shape {
     override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
-        val radiusDp = DOCK_RADIUS + (MINI_RADIUS - DOCK_RADIUS) * progress.value
+        val radiusDp = normalRadius + (MINI_RADIUS - normalRadius) * progress.value
         val radius = with(density) { radiusDp.dp.toPx() }
             .coerceAtMost(min(size.width, size.height) / 2f)
         return Outline.Rounded(RoundRect(0f, 0f, size.width, size.height, radius, radius))
@@ -367,21 +395,7 @@ private fun FullDockContent(
                 onClick = onOpenSound,
                 iconSize = 18.dp
             )
-            Box {
-                QuietGlyphButton(
-                    icon = Glyphs.Queue,
-                    contentDescription = if (upcoming > 0) {
-                        stringResource(Res.string.shell_dock_queue_count, upcoming)
-                    } else {
-                        stringResource(Res.string.shell_dock_queue)
-                    },
-                    onClick = onOpenQueue,
-                    iconSize = 18.dp
-                )
-                if (upcoming > 0) {
-                    CountBadge(upcoming, Modifier.align(Alignment.TopEnd).offset(x = 2.dp, y = (-2).dp))
-                }
-            }
+            QueueButton(upcoming = upcoming, onClick = onOpenQueue)
             QuietGlyphButton(
                 icon = Glyphs.Lyrics,
                 contentDescription = stringResource(Res.string.shell_dock_lyrics),
@@ -396,6 +410,106 @@ private fun FullDockContent(
                 iconSize = 18.dp
             )
         }
+    }
+}
+
+/** Medium: one row; the progress line on the top edge stands in for the waveform. */
+@Composable
+private fun MediumDockContent(
+    player: PlayerController,
+    subLine: DockSubLine,
+    upcoming: Int,
+    onOpenNowPlaying: () -> Unit,
+    onOpenSound: () -> Unit,
+    onOpenQueue: () -> Unit,
+    onToggleMini: () -> Unit
+) {
+    val hasTrack = player.ui.currentQueueEntry != null
+    Box(modifier = Modifier.fillMaxSize()) {
+        DockProgressLine(
+            player = player,
+            modifier = Modifier.align(Alignment.TopCenter).padding(horizontal = 22.dp)
+        )
+        Row(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            NowPlayingBlock(
+                player = player,
+                subLine = subLine,
+                onClick = onOpenNowPlaying,
+                modifier = Modifier.weight(1f)
+            )
+            Row(
+                modifier = Modifier.padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                PreviousButton(player)
+                DockPlayKey(player)
+                NextButton(player)
+            }
+            Box(
+                Modifier.padding(horizontal = 4.dp).width(1.dp).height(26.dp)
+                    .background(AppTheme.colors.outline)
+            )
+            QuietGlyphButton(
+                icon = Glyphs.Lyrics,
+                contentDescription = stringResource(Res.string.shell_dock_lyrics),
+                onClick = onOpenNowPlaying,
+                enabled = hasTrack,
+                iconSize = 18.dp
+            )
+            QueueButton(upcoming = upcoming, onClick = onOpenQueue)
+            QuietGlyphButton(
+                icon = Glyphs.Equalizer,
+                contentDescription = stringResource(Res.string.shell_dock_sound),
+                onClick = onOpenSound,
+                iconSize = 18.dp
+            )
+            QuietGlyphButton(
+                icon = Glyphs.MiniPlayer,
+                contentDescription = stringResource(Res.string.shell_dock_mini),
+                onClick = onToggleMini,
+                iconSize = 18.dp
+            )
+        }
+    }
+}
+
+/** Queue button with the up-next count as a badge and in its accessible name. */
+@Composable
+private fun QueueButton(upcoming: Int, onClick: () -> Unit) {
+    Box {
+        QuietGlyphButton(
+            icon = Glyphs.Queue,
+            contentDescription = if (upcoming > 0) {
+                stringResource(Res.string.shell_dock_queue_count, upcoming)
+            } else {
+                stringResource(Res.string.shell_dock_queue)
+            },
+            onClick = onClick,
+            iconSize = 18.dp
+        )
+        if (upcoming > 0) {
+            CountBadge(upcoming, Modifier.align(Alignment.TopEnd).offset(x = 2.dp, y = (-2).dp))
+        }
+    }
+}
+
+/**
+ * A 2dp line showing how far into the track playback is (accent over 10% white). Decorative:
+ * seeking lives in now playing, and the play key already announces the state.
+ */
+@Composable
+internal fun DockProgressLine(player: PlayerController, modifier: Modifier = Modifier) {
+    val colors = AppTheme.colors
+    val accent = colors.primary
+    val rest = Color.White.copy(alpha = 0.10f)
+    val progress = player.seekProgress.coerceIn(0f, 1f)
+    Canvas(modifier = modifier.fillMaxWidth().height(2.dp).clearAndSetSemantics { }) {
+        drawRect(rest)
+        if (progress > 0f) drawRect(accent, size = Size(size.width * progress, size.height))
     }
 }
 
@@ -587,7 +701,7 @@ private fun PreviousButton(player: PlayerController) {
 }
 
 @Composable
-private fun NextButton(player: PlayerController) {
+internal fun NextButton(player: PlayerController) {
     QuietGlyphButton(
         icon = Glyphs.SkipNext,
         contentDescription = stringResource(Res.string.player_next_content_description),
@@ -604,7 +718,7 @@ private fun transportEnabled(player: PlayerController): Boolean =
 
 /** 40dp white play/pause key with a canvas-coloured glyph (spinner while a start is pending). */
 @Composable
-private fun DockPlayKey(player: PlayerController) {
+internal fun DockPlayKey(player: PlayerController) {
     val colors = AppTheme.colors
     val ui = player.ui
     val ink = colors.background

@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.unit.dp
+import org.spotube.spotube.modules.shell.MinimumWindowHeight
+import org.spotube.spotube.modules.shell.MinimumWindowWidth
 import androidx.compose.ui.window.rememberWindowState
 import org.jetbrains.compose.resources.painterResource
 import spotube.composeapp.generated.resources.Res
@@ -81,7 +83,8 @@ private const val WINDOW_SCREEN_FRACTION = 0.85f
 private const val WINDOW_ASPECT_RATIO = 16f / 10f
 private val MAX_WINDOW_WIDTH = 1440.dp
 private val MAX_WINDOW_HEIGHT = 960.dp
-private val MIN_WINDOW_SIZE = DpSize(800.dp, 500.dp)
+/** The narrow shell layout is designed down to this size; the window can't be made smaller. */
+private val MIN_WINDOW_SIZE = DpSize(MinimumWindowWidth, MinimumWindowHeight)
 private const val WINDOW_STATE_SAVE_DEBOUNCE_MS = 500L
 
 /** Largest [WINDOW_ASPECT_RATIO] size that fits inside [maxWidth] x [maxHeight]. */
@@ -231,7 +234,8 @@ fun main() {
             },
             title = "Spotube",
             icon = painterResource(Res.drawable.spotube_logo),
-            visible = isWindowVisible
+            visible = isWindowVisible,
+            minimumSize = MIN_WINDOW_SIZE
         ) {
             CompositionLocalProvider(
                 LocalApplicationScope provides this@nucleusApplication,

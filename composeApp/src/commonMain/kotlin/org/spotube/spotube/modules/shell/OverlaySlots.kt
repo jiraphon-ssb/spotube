@@ -38,7 +38,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
@@ -164,11 +164,15 @@ internal fun RightOverlayPanel(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(
+                    // The start edge only matters on narrow windows, where the panel would
+                    // otherwise run off the left side: it then spans the window.
+                    start = OverlayEdge,
                     top = OverlayEdge,
                     end = OverlayEdge,
                     bottom = if (bottomInset > OverlayEdge) bottomInset else OverlayEdge
                 )
-                .width(OverlayPanelWidth)
+                .widthIn(max = OverlayPanelWidth)
+                .fillMaxWidth()
                 .fillMaxHeight()
                 .shellGlass(
                     OverlayPanelShape,

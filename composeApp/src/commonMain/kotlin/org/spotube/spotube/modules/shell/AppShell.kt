@@ -53,6 +53,8 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
+import org.spotube.spotube.getPlatform
+import org.spotube.spotube.isDesktop
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.composeunstyled.Sheet
@@ -155,16 +157,19 @@ fun AppShell(
     PlayDestinationPickerHost()
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        // Wide windows get the floating glass shell (no sidebar); narrow ones keep the compact
-        // layout with the bottom bar and the draggable player sheet.
-        val useSidebar = viewModel.useSidebar()
+        // Desktop windows always get the floating glass shell, laid out for the width (see
+        // shellChromeFor); phones and tablets keep the compact layout with the bottom bar and the
+        // draggable player sheet until they are wide enough.
+        val desktop = remember { getPlatform().isDesktop() }
+        val useSidebar = usesGlassShell(desktop, maxWidth)
+        val chrome = shellChromeFor(maxWidth)
         val chromeUiState by viewModel.compactChromeUiState.collectAsState()
         val density = LocalDensity.current
         val navigationBarInset = with(density) {
             WindowInsets.navigationBars.getBottom(this).toDp()
         }
         val bottomOverlayInset = if (useSidebar) {
-            PlayerDockClearance
+            chrome.bottomInset
         } else {
             viewModel.bottomOverlayInset(false, navigationBarInset, chromeUiState)
         }
@@ -185,9 +190,10 @@ fun AppShell(
 
         CompositionLocalProvider(
             LocalAppShellBottomInset provides bottomOverlayInset,
-            LocalAppShellTopInset provides if (useSidebar) WideShellTopInset else 0.dp,
+            LocalAppShellTopInset provides if (useSidebar) chrome.topInset else 0.dp,
             LocalShellActions provides shellActions,
-            LocalRoomLight provides roomLight
+            LocalRoomLight provides roomLight,
+            LocalShellWidthClass provides chrome.widthClass
         ) {
             if (useSidebar) {
                 WideAppShell(

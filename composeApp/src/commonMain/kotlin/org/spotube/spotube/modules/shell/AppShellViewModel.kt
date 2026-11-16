@@ -59,7 +59,7 @@ data class ShellToast(
 )
 
 class AppShellViewModel : ViewModel() {
-    val sidebarMinWidth = 840.dp
+    val sidebarMinWidth = CompactShellMaxWidth
     val bottomBarHeight = 80.dp
     // The background bleed overlaps the bottom bar and is not part of the peek height.
     val floatingPlayerHeight = FloatingPlayerContentHeight
