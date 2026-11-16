@@ -159,7 +159,11 @@ jobs:
         uses: android-actions/setup-android@v4
 
       - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
+        with:
+          # Gobley 0.3.7 can't read Cargo 1.100's new build-dir layout (gobley/gobley#298).
+          # Drop the pin once a Gobley release with that fix is in libs.versions.toml.
+          toolchain: 1.99.1
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
@@ -208,7 +212,11 @@ jobs:
           java-version: 21
 
       - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
+        with:
+          # Gobley 0.3.7 can't read Cargo 1.100's new build-dir layout (gobley/gobley#298).
+          # Drop the pin once a Gobley release with that fix is in libs.versions.toml.
+          toolchain: 1.99.1
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
@@ -291,7 +299,11 @@ jobs:
           java-version: 21
 
       - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
+        with:
+          # Gobley 0.3.7 can't read Cargo 1.100's new build-dir layout (gobley/gobley#298).
+          # Drop the pin once a Gobley release with that fix is in libs.versions.toml.
+          toolchain: 1.99.1
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
@@ -412,7 +424,11 @@ jobs:
           java-version: 21
 
       - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
+        with:
+          # Gobley 0.3.7 can't read Cargo 1.100's new build-dir layout (gobley/gobley#298).
+          # Drop the pin once a Gobley release with that fix is in libs.versions.toml.
+          toolchain: 1.99.1
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
@@ -518,7 +534,11 @@ jobs:
           java-version: 21
 
       - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
+        with:
+          # Gobley 0.3.7 can't read Cargo 1.100's new build-dir layout (gobley/gobley#298).
+          # Drop the pin once a Gobley release with that fix is in libs.versions.toml.
+          toolchain: 1.99.1
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
@@ -583,7 +603,11 @@ jobs:
           java-version: 21
 
       - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
+        with:
+          # Gobley 0.3.7 can't read Cargo 1.100's new build-dir layout (gobley/gobley#298).
+          # Drop the pin once a Gobley release with that fix is in libs.versions.toml.
+          toolchain: 1.99.1
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
@@ -652,7 +676,11 @@ jobs:
           java-version: 21
 
       - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
+        with:
+          # Gobley 0.3.7 can't read Cargo 1.100's new build-dir layout (gobley/gobley#298).
+          # Drop the pin once a Gobley release with that fix is in libs.versions.toml.
+          toolchain: 1.99.1
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
